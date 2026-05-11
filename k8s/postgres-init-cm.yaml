@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: selfcare
+data:
+  001_init.sql: |
+    CREATE TABLE IF NOT EXISTS users (
+        id            BIGSERIAL PRIMARY KEY,
+        email         TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        name          TEXT NOT NULL DEFAULT '',
+        avatar_url    TEXT,
+        is_premium    BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS mood_entries (
+        id           BIGSERIAL PRIMARY KEY,
+        user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        score        SMALLINT NOT NULL CHECK (score BETWEEN 1 AND 10),
+        stress_level SMALLINT NOT NULL DEFAULT 5 CHECK (stress_level BETWEEN 1 AND 10),
+        work_hours   NUMERIC(4,1) NOT NULL DEFAULT 0,
+        note         TEXT NOT NULL DEFAULT '',
+        tags         TEXT[] NOT NULL DEFAULT '{}',
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_mood_entries_user_created
+        ON mood_entries(user_id, created_at DESC);

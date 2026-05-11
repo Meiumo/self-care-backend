@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: selfcare-api
+  namespace: selfcare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: selfcare-api
+  template:
+    metadata:
+      labels:
+        app: selfcare-api
+    spec:
+      containers:
+        - name: api
+          image: selfcare-api:local
+          imagePullPolicy: Never   # Minikube: образ берётся из локального Docker-демона
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: DATABASE_URL
+              value: postgres://selfcare:$(POSTGRES_PASSWORD)@postgres.selfcare.svc.cluster.local:5432/selfcare?sslmode=disable
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: selfcare-secrets
+                  key: postgres-password
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: selfcare-secrets
+                  key: jwt-secret
+            - name: CLAUDE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: selfcare-secrets
+                  key: claude-api-key
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: selfcare-api
+  namespace: selfcare
+spec:
+  selector:
+    app: selfcare-api
+  type: NodePort   # NodePort позволяет достучаться через minikube service
+  ports:
+    - port: 80
+      targetPort: 8080
+      nodePort: 30080

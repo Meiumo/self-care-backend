@@ -1,0 +1,21 @@
+# Для Minikube: minikube addons enable ingress
+# Для K3s: Traefik включён по умолчанию
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: selfcare-ingress
+  namespace: selfcare
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: selfcare.local   # добавь в /etc/hosts: $(minikube ip) selfcare.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: selfcare-api
+                port:
+                  number: 80
