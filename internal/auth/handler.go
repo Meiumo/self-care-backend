@@ -49,7 +49,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, ErrWeakPassword), errors.Is(err, ErrInvalidEmail):
 			respond.BadRequest(w, err.Error())
 		default:
-			respond.Internal(w)
+			respond.Internal(w, err)
 		}
 		return
 	}
@@ -73,7 +73,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 			respond.Error(w, http.StatusUnauthorized, err.Error())
 			return
 		}
-		respond.Internal(w)
+		respond.Internal(w, err)
 		return
 	}
 	respond.OK(w, result)

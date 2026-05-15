@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/romangolovachev/selfcare/pkg/jwtutil"
 	"github.com/romangolovachev/selfcare/pkg/respond"
@@ -24,7 +25,10 @@ func (h *Handler) Routes() http.Handler {
 	r := chi.NewRouter()
 	r.Post("/", h.create)
 	r.Get("/", h.list)
+	r.Get("/today", h.today)
 	r.Get("/weekly", h.weekly)
+	r.Get("/tags", h.tags)
+	r.Patch("/{id}", h.update)
 	return r
 }
 
@@ -56,7 +60,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 			respond.BadRequest(w, err.Error())
 			return
 		}
-		respond.Internal(w)
+		respond.Internal(w, err)
 		return
 	}
 	respond.Created(w, entry)
@@ -70,7 +74,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	}
 	entries, err := h.svc.List(r.Context(), userID, page)
 	if err != nil {
-		respond.Internal(w)
+		respond.Internal(w, err)
 		return
 	}
 	respond.OK(w, entries)
@@ -80,8 +84,57 @@ func (h *Handler) weekly(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	report, err := h.svc.WeeklyReport(r.Context(), userID)
 	if err != nil {
-		respond.Internal(w)
+		respond.Internal(w, err)
 		return
 	}
 	respond.OK(w, report)
+}
+
+func (h *Handler) tags(w http.ResponseWriter, r *http.Request) {
+	tags, err := h.svc.Tags(r.Context())
+	if err != nil {
+		respond.Internal(w, err)
+		return
+	}
+	respond.OK(w, tags)
+}
+
+func (h *Handler) today(w http.ResponseWriter, r *http.Request) {
+	userID := jwtutil.UserID(r.Context())
+	entry, err := h.svc.Today(r.Context(), userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			respond.NotFound(w)
+			return
+		}
+		respond.Internal(w, err)
+		return
+	}
+	respond.OK(w, entry)
+}
+
+type patchRequest struct {
+	Score       int      `json:"score"`
+	WorkHours   float64  `json:"work_hours"`
+	StressLevel int      `json:"stress_level"`
+	Tags        []string `json:"tags"`
+}
+
+func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+	userID := jwtutil.UserID(r.Context())
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	var req patchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.BadRequest(w, "invalid json")
+		return
+	}
+	entry, err := h.svc.Update(r.Context(), UpdateInput{
+		ID: id, UserID: userID,
+		Score: req.Score, WorkHours: req.WorkHours, StressLevel: req.StressLevel, Tags: req.Tags,
+	})
+	if err != nil {
+		respond.Internal(w, err)
+		return
+	}
+	respond.OK(w, entry)
 }

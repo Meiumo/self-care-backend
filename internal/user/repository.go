@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -48,4 +49,60 @@ func (r *Repository) SetPremium(ctx context.Context, id int64, premium bool) err
 		premium, id,
 	)
 	return err
+}
+
+type Stats struct {
+	StreakDays   int `json:"streak_days"`
+	TotalEntries int `json:"total_entries"`
+	TotalEvents  int `json:"total_events"`
+}
+
+func (r *Repository) GetStats(ctx context.Context, userID int64) (*Stats, error) {
+	var totalEntries, totalEvents int
+	if err := r.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM mood_entries WHERE user_id = $1`, userID,
+	).Scan(&totalEntries); err != nil {
+		return nil, err
+	}
+	// Total distinct event tags logged across all mood entries
+	if err := r.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM (SELECT unnest(tags) FROM mood_entries WHERE user_id = $1) t`,
+		userID,
+	).Scan(&totalEvents); err != nil {
+		return nil, err
+	}
+
+	rows, err := r.db.Query(ctx,
+		`SELECT DISTINCT ts_to_date(created_at)
+		 FROM mood_entries
+		 WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '31 days'
+		 ORDER BY 1 DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var dates []string
+	for rows.Next() {
+		var d string
+		if err := rows.Scan(&d); err != nil {
+			return nil, err
+		}
+		dates = append(dates, d)
+	}
+
+	streak := 0
+	today := time.Now().UTC().Format("2006-01-02")
+	cursor := today
+	for _, d := range dates {
+		if d == cursor {
+			streak++
+			t, _ := time.Parse("2006-01-02", cursor)
+			cursor = t.AddDate(0, 0, -1).Format("2006-01-02")
+		} else {
+			break
+		}
+	}
+
+	return &Stats{StreakDays: streak, TotalEntries: totalEntries, TotalEvents: totalEvents}, nil
 }

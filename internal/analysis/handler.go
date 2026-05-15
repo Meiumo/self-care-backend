@@ -1,11 +1,11 @@
 package analysis
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/romangolovachev/selfcare/pkg/jwtutil"
 	"github.com/romangolovachev/selfcare/pkg/respond"
 )
 
@@ -19,33 +19,43 @@ func NewHandler(svc *Service) *Handler {
 
 func (h *Handler) Routes() http.Handler {
 	r := chi.NewRouter()
-	r.Post("/text", h.analyzeText)
+	r.Get("/insights", h.insights)
+	r.Post("/insights/refresh", h.refresh)
+	r.Get("/history", h.history)
 	return r
 }
 
-type analyzeRequest struct {
-	Text string `json:"text"`
+func (h *Handler) insights(w http.ResponseWriter, r *http.Request) {
+	userID := jwtutil.UserID(r.Context())
+	report, err := h.svc.GetInsights(r.Context(), userID)
+	if err != nil {
+		respond.Internal(w, err)
+		return
+	}
+	respond.OK(w, report)
 }
 
-func (h *Handler) analyzeText(w http.ResponseWriter, r *http.Request) {
-	var req analyzeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respond.BadRequest(w, "invalid json")
-		return
-	}
-	if len(req.Text) < 10 {
-		respond.BadRequest(w, "text too short")
-		return
-	}
-	if len(req.Text) > 10000 {
-		respond.BadRequest(w, "text too long (max 10000 chars)")
-		return
-	}
-
-	result, err := h.svc.AnalyzeText(r.Context(), req.Text)
+func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
+	userID := jwtutil.UserID(r.Context())
+	items, err := h.svc.History(r.Context(), userID)
 	if err != nil {
-		respond.Internal(w)
+		respond.Internal(w, err)
 		return
 	}
-	respond.OK(w, result)
+	respond.OK(w, items)
+}
+
+// refresh triggers insight regeneration for the current user only (for testing).
+func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
+	userID := jwtutil.UserID(r.Context())
+	if err := h.svc.RegenerateForUser(r.Context(), userID); err != nil {
+		respond.Internal(w, err)
+		return
+	}
+	report, err := h.svc.GetInsights(r.Context(), userID)
+	if err != nil {
+		respond.Internal(w, err)
+		return
+	}
+	respond.OK(w, report)
 }

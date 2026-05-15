@@ -1,6 +1,6 @@
 .PHONY: dev build test lint \
         docker-up docker-down docker-logs db-shell \
-        mk-start mk-build mk-apply mk-up mk-down mk-url mk-logs mk-status \
+        mk-start mk-build mk-apply mk-up mk-down mk-url mk-logs mk-status mk-forward \
         tidy
 
 # ─── Local dev ────────────────────────────────────────────────────────────────
@@ -71,6 +71,10 @@ mk-logs:
 # Состояние подов
 mk-status:
 	kubectl get pods,svc,pvc -n selfcare
+
+# Пробросить порт API на все интерфейсы (нужно для доступа с телефона через VPN)
+mk-forward:
+	kubectl port-forward -n selfcare svc/selfcare-api 8080:80 --address 0.0.0.0
 
 # Пересобрать и откатить деплой (быстрое обновление образа)
 mk-redeploy: mk-build

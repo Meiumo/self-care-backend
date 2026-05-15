@@ -1,0 +1,44 @@
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  IMAGE: $CI_REGISTRY_IMAGE/api
+
+# ─── Test ─────────────────────────────────────────────────────────────────────
+
+test:
+  stage: test
+  script:
+    - docker run --rm
+        -v "$PWD:/app"
+        -w /app
+        golang:1.25-alpine
+        go test ./... -race -count=1
+
+# ─── Build ────────────────────────────────────────────────────────────────────
+
+build:
+  stage: build
+  script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - docker build -t "$IMAGE:$CI_COMMIT_SHA" -t "$IMAGE:latest" .
+    - docker push "$IMAGE:$CI_COMMIT_SHA"
+    - docker push "$IMAGE:latest"
+  only:
+    - main
+
+# ─── Deploy ───────────────────────────────────────────────────────────────────
+
+deploy:
+  stage: deploy
+  script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - cd /opt/selfcare/backend
+    - API_IMAGE="$IMAGE:$CI_COMMIT_SHA" docker compose pull api
+    - API_IMAGE="$IMAGE:$CI_COMMIT_SHA" docker compose up -d
+  only:
+    - main
+  environment:
+    name: production

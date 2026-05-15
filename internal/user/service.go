@@ -41,4 +41,8 @@ func (s *Service) SetPremium(ctx context.Context, userID int64, premium bool) er
 	return s.repo.SetPremium(ctx, userID, premium)
 }
 
+func (s *Service) GetStats(ctx context.Context, userID int64) (*Stats, error) {
+	return s.repo.GetStats(ctx, userID)
+}
+
 var ErrNotFound = pgx.ErrNoRows
