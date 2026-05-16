@@ -39,6 +39,9 @@ jobs:
     needs: build
     runs-on: self-hosted
     steps:
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u meiumo --password-stdin
+
       - name: Pull and restart
         env:
           API_IMAGE: ${{ env.IMAGE }}:${{ github.sha }}
