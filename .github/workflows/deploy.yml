@@ -40,8 +40,9 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Pull and restart
+        env:
+          API_IMAGE: ${{ env.IMAGE }}:${{ github.sha }}
         run: |
           cd /opt/selfcare/backend
-          echo "API_IMAGE=${{ env.IMAGE }}:${{ github.sha }}" >> .env
-          sudo -u selfcare docker compose pull api
-          sudo -u selfcare docker compose up -d
+          docker compose pull api
+          docker compose up -d
