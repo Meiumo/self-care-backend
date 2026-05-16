@@ -43,8 +43,6 @@ jobs:
         run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u meiumo --password-stdin
 
       - name: Pull and restart
-        env:
-          API_IMAGE: ${{ env.IMAGE }}:${{ github.sha }}
         run: |
           cd /opt/selfcare/backend
           docker compose pull api
