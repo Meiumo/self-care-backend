@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE: ghcr.io/${{ github.repository_owner }}/self-care-backend/api
+  IMAGE: ghcr.io/meiumo/self-care-backend/api
 
 jobs:
   build:
