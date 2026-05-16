@@ -2,9 +2,13 @@ package liveresponse
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// ErrMessageLimit is returned when the user has sent maxChatUserMessages in a session.
+var ErrMessageLimit = errors.New("message limit reached")
 
 // tempByType returns the inference temperature for each card variant.
 // Advice cards use lower temperature for more concrete, repeatable answers.
@@ -23,6 +27,10 @@ type Session struct {
 	FollowupHours    *int
 	FollowupQuestion string
 	IsLiteMode       bool
+	// IsResumed is true when an existing today's session was returned instead of generating a new one.
+	IsResumed    bool
+	ChatMessages []Message // populated only when IsResumed == true
+	UserMsgCount int       // how many user messages have been sent (for messagesLeft)
 }
 
 // Service orchestrates prompt assembly, DeepSeek call, and DB persistence.
@@ -41,12 +49,19 @@ func NewService(db *pgxpool.Pool, client *OpenRouterClient) *Service {
 }
 
 // Generate calls DeepSeek and saves the result to live_response_sessions.
+// If a session for the same event_tag already exists today, it is returned as-is
+// (IsResumed == true, ChatMessages populated) without calling DeepSeek again.
 func (s *Service) Generate(
 	ctx context.Context,
 	userID int64,
 	trigger TriggerResult,
 	selectedChip string,
 ) (*Session, error) {
+	// 0. Resume today's existing session if one exists for this event_tag
+	if resumed, ok, err := s.tryResume(ctx, userID, trigger.Tag); err == nil && ok {
+		return resumed, nil
+	}
+
 	// 1. Lite Mode detection
 	liteMode, err := IsLiteMode(ctx, s.db, userID)
 	if err != nil {
@@ -214,6 +229,136 @@ func (s *Service) AnswerFollowup(
 	}
 
 	return result, nil
+}
+
+// Chat handles one user message turn in a multi-turn live response session.
+// Returns the AI reply, how many user messages remain, and any error.
+func (s *Service) Chat(ctx context.Context, sessionID, userID int64, message string) (string, int, error) {
+	var eventTag, initialAI string
+	if err := s.db.QueryRow(ctx,
+		`SELECT event_tag, ai_message FROM live_response_sessions WHERE id = $1 AND user_id = $2`,
+		sessionID, userID,
+	).Scan(&eventTag, &initialAI); err != nil {
+		return "", 0, err
+	}
+
+	rows, err := s.db.Query(ctx,
+		`SELECT role, content FROM live_response_messages WHERE session_id = $1 ORDER BY created_at`,
+		sessionID,
+	)
+	if err != nil {
+		return "", 0, err
+	}
+	defer rows.Close()
+
+	var history []Message
+	userCount := 0
+	for rows.Next() {
+		var role, content string
+		if err := rows.Scan(&role, &content); err != nil {
+			return "", 0, err
+		}
+		history = append(history, Message{Role: role, Content: content})
+		if role == "user" {
+			userCount++
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return "", 0, err
+	}
+
+	if userCount >= maxChatUserMessages {
+		return "", 0, ErrMessageLimit
+	}
+
+	msgs := []Message{
+		{Role: "system", Content: SystemChat(eventTag)},
+		{Role: "assistant", Content: initialAI},
+	}
+	msgs = append(msgs, history...)
+	msgs = append(msgs, Message{Role: "user", Content: message})
+
+	reply, err := s.client.CompleteText(ctx, msgs, 0.5)
+	if err != nil {
+		return "", 0, err
+	}
+
+	if _, err := s.db.Exec(ctx,
+		`INSERT INTO live_response_messages (session_id, role, content) VALUES ($1, 'user', $2)`,
+		sessionID, message,
+	); err != nil {
+		return "", 0, err
+	}
+	if _, err := s.db.Exec(ctx,
+		`INSERT INTO live_response_messages (session_id, role, content) VALUES ($1, 'assistant', $2)`,
+		sessionID, reply,
+	); err != nil {
+		return "", 0, err
+	}
+
+	return reply, maxChatUserMessages - userCount - 1, nil
+}
+
+// tryResume looks for a live_response_sessions row created today (UTC) for the
+// given user and event_tag. If found, it loads the chat messages and returns a
+// Session with IsResumed == true so the caller can skip DeepSeek entirely.
+func (s *Service) tryResume(ctx context.Context, userID int64, eventTag string) (*Session, bool, error) {
+	var (
+		id        int64
+		aiMessage string
+		fhours    *int
+		fquestion string
+	)
+	err := s.db.QueryRow(ctx,
+		`SELECT id, ai_message, followup_hours, followup_question
+		 FROM live_response_sessions
+		 WHERE user_id = $1
+		   AND event_tag = $2
+		   AND created_at >= date_trunc('day', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
+		 ORDER BY created_at DESC
+		 LIMIT 1`,
+		userID, eventTag,
+	).Scan(&id, &aiMessage, &fhours, &fquestion)
+	if err != nil {
+		return nil, false, err // pgx.ErrNoRows is the common case — caller ignores it
+	}
+
+	rows, err := s.db.Query(ctx,
+		`SELECT role, content FROM live_response_messages WHERE session_id = $1 ORDER BY created_at`,
+		id,
+	)
+	if err != nil {
+		return nil, false, err
+	}
+	defer rows.Close()
+
+	var msgs []Message
+	userCount := 0
+	for rows.Next() {
+		var role, content string
+		if err := rows.Scan(&role, &content); err != nil {
+			return nil, false, err
+		}
+		msgs = append(msgs, Message{Role: role, Content: content})
+		if role == "user" {
+			userCount++
+		}
+	}
+
+	sess := &Session{
+		ID: id,
+		AIResponse: &AIResponse{
+			Message:          aiMessage,
+			AdviceTags:       []string{},
+			FollowupQuestion: fquestion,
+		},
+		FollowupHours:    fhours,
+		FollowupQuestion: fquestion,
+		IsResumed:        true,
+		ChatMessages:     msgs,
+		UserMsgCount:     userCount,
+	}
+	return sess, true, nil
 }
 
 // ── Internal ──────────────────────────────────────────────────────────────────

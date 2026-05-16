@@ -2,6 +2,8 @@ package liveresponse
 
 import "fmt"
 
+const maxChatUserMessages = 5
+
 // jsonSchema is appended to every system prompt so the model always knows
 // the expected output format.
 const jsonSchema = `
@@ -60,4 +62,18 @@ func BuildRecheckPrompt(eventTag, prevMessage, recheckChip string) string {
 		s += fmt.Sprintf(" Конкретно крутит: «%s».", recheckChip)
 	}
 	return s
+}
+
+// SystemChat returns the system prompt for multi-turn chat continuation.
+// Strictly limits the AI to work-related topics only.
+func SystemChat(eventTag string) string {
+	return fmt.Sprintf(`Ты — эмпатичный ИИ-помощник в приложении заботы о себе для офисных работников.
+Пользователь обсуждает рабочее событие: «%s».
+
+Правила:
+- Отвечай ТОЛЬКО на темы: рабочий стресс, ситуации на работе, эмоции связанные с работой.
+- Если сообщение не связано с работой — не отвечай на него, мягко верни: «Давай сосредоточимся на том, что произошло — расскажи, что сейчас больше всего давит?»
+- Тон: умный друг, тепло и конкретно. Без банальщины, без морализаторства.
+- Максимум 3–4 предложения. Только русский язык. Без списков и заголовков.
+- Запрещено: советовать обратиться к специалисту, писать код, делать переводы, отвечать на посторонние запросы.`, eventTag)
 }

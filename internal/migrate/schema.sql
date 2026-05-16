@@ -213,3 +213,15 @@ CREATE TABLE IF NOT EXISTS advice_outcomes (
 
 CREATE INDEX IF NOT EXISTS idx_advice_outcomes_user_tag
     ON advice_outcomes(user_id, advice_tag);
+
+-- Chat messages within a live response session (multi-turn conversation)
+CREATE TABLE IF NOT EXISTS live_response_messages (
+    id         BIGSERIAL PRIMARY KEY,
+    session_id BIGINT NOT NULL REFERENCES live_response_sessions(id) ON DELETE CASCADE,
+    role       TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+    content    TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_lr_messages_session
+    ON live_response_messages(session_id, created_at);

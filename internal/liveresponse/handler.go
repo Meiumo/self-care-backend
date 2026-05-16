@@ -2,8 +2,10 @@ package liveresponse
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
+	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
 
@@ -24,6 +26,7 @@ func (h *Handler) Routes() http.Handler {
 	r.Post("/", h.generate)
 	r.Post("/{id}/feedback", h.feedback)
 	r.Post("/{id}/followup", h.followup)
+	r.Post("/{id}/chat", h.chat)
 	return r
 }
 
@@ -54,14 +57,32 @@ func (h *Handler) generate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type resp struct {
-		SessionID        int64    `json:"session_id"`
-		Message          string   `json:"message"`
-		AdviceTags       []string `json:"advice_tags"`
-		FollowupHours    *int     `json:"followup_hours"`
-		FollowupQuestion string   `json:"followup_question"`
-		IsLiteMode       bool     `json:"is_lite_mode"`
+	type chatMsg struct {
+		Role    string `json:"role"`
+		Content string `json:"content"`
 	}
+	type resp struct {
+		SessionID        int64      `json:"session_id"`
+		Message          string     `json:"message"`
+		AdviceTags       []string   `json:"advice_tags"`
+		FollowupHours    *int       `json:"followup_hours"`
+		FollowupQuestion string     `json:"followup_question"`
+		IsLiteMode       bool       `json:"is_lite_mode"`
+		IsResumed        bool       `json:"is_resumed"`
+		MessagesLeft     int        `json:"messages_left"`
+		Messages         []chatMsg  `json:"messages,omitempty"`
+	}
+
+	msgsLeft := maxChatUserMessages - sess.UserMsgCount
+	if msgsLeft < 0 {
+		msgsLeft = 0
+	}
+
+	var chatMsgs []chatMsg
+	for _, m := range sess.ChatMessages {
+		chatMsgs = append(chatMsgs, chatMsg{Role: m.Role, Content: m.Content})
+	}
+
 	respond.OK(w, resp{
 		SessionID:        sess.ID,
 		Message:          sess.AIResponse.Message,
@@ -69,6 +90,9 @@ func (h *Handler) generate(w http.ResponseWriter, r *http.Request) {
 		FollowupHours:    sess.FollowupHours,
 		FollowupQuestion: sess.FollowupQuestion,
 		IsLiteMode:       sess.IsLiteMode,
+		IsResumed:        sess.IsResumed,
+		MessagesLeft:     msgsLeft,
+		Messages:         chatMsgs,
 	})
 }
 
@@ -94,6 +118,45 @@ func (h *Handler) feedback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respond.OK(w, map[string]string{"status": "ok"})
+}
+
+// POST /live-response/{id}/chat
+type chatRequest struct {
+	Message string `json:"message"`
+}
+
+func (h *Handler) chat(w http.ResponseWriter, r *http.Request) {
+	userID := jwtutil.UserID(r.Context())
+	sessionID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		respond.BadRequest(w, "invalid id")
+		return
+	}
+	var req chatRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Message == "" {
+		respond.BadRequest(w, "message required")
+		return
+	}
+	if utf8.RuneCountInString(req.Message) > 500 {
+		respond.BadRequest(w, "message too long: max 500 characters")
+		return
+	}
+
+	reply, msgsLeft, err := h.svc.Chat(r.Context(), sessionID, userID, req.Message)
+	if err != nil {
+		if errors.Is(err, ErrMessageLimit) {
+			respond.Error(w, http.StatusTooManyRequests, "message limit reached")
+			return
+		}
+		respond.Internal(w, err)
+		return
+	}
+
+	type resp struct {
+		Reply        string `json:"reply"`
+		MessagesLeft int    `json:"messages_left"`
+	}
+	respond.OK(w, resp{Reply: reply, MessagesLeft: msgsLeft})
 }
 
 // POST /live-response/{id}/followup
