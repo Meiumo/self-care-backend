@@ -32,15 +32,15 @@ func (h *Handler) status(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type resp struct {
-		InTrial       bool `json:"in_trial"`
-		TrialDayNum   int  `json:"trial_day_num"`
-		IsPremium     bool `json:"is_premium"`
-		FreeUsedMonth int  `json:"free_used_month"`
+		InTrial      bool `json:"in_trial"`
+		TrialDayNum  int  `json:"trial_day_num"`
+		IsPremium    bool `json:"is_premium"`
+		TrialStarted bool `json:"trial_started"`
 	}
 	respond.OK(w, resp{
-		InTrial:       st.InTrial,
-		TrialDayNum:   st.TrialDayNum,
-		IsPremium:     st.IsPremium,
-		FreeUsedMonth: st.FreeUsedMonth,
+		InTrial:      st.InTrial,
+		TrialDayNum:  st.TrialDayNum,
+		IsPremium:    st.IsPremium,
+		TrialStarted: st.TrialStarted,
 	})
 }

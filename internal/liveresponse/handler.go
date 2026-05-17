@@ -67,7 +67,6 @@ func (h *Handler) generate(w http.ResponseWriter, r *http.Request) {
 		AdviceTags       []string   `json:"advice_tags"`
 		FollowupHours    *int       `json:"followup_hours"`
 		FollowupQuestion string     `json:"followup_question"`
-		IsLiteMode       bool       `json:"is_lite_mode"`
 		IsResumed        bool       `json:"is_resumed"`
 		MessagesLeft     int        `json:"messages_left"`
 		Messages         []chatMsg  `json:"messages,omitempty"`
@@ -89,7 +88,6 @@ func (h *Handler) generate(w http.ResponseWriter, r *http.Request) {
 		AdviceTags:       sess.AIResponse.AdviceTags,
 		FollowupHours:    sess.FollowupHours,
 		FollowupQuestion: sess.FollowupQuestion,
-		IsLiteMode:       sess.IsLiteMode,
 		IsResumed:        sess.IsResumed,
 		MessagesLeft:     msgsLeft,
 		Messages:         chatMsgs,

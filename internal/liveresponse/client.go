@@ -46,9 +46,9 @@ func NewOpenRouterClient(apiKey, model string) *OpenRouterClient {
 }
 
 // CompleteText sends the messages and returns the raw text response without JSON parsing.
-// Use for prompts that don't require structured output (e.g. recheck advice).
+// Use for prompts that don't require structured output (e.g. chat turns, recheck advice).
 func (c *OpenRouterClient) CompleteText(ctx context.Context, messages []Message, temperature float64) (string, error) {
-	return c.call(ctx, messages, temperature)
+	return c.call(ctx, messages, temperature, 700)
 }
 
 // Complete sends the messages to DeepSeek and returns the parsed AIResponse.
@@ -64,7 +64,7 @@ func (c *OpenRouterClient) Complete(ctx context.Context, messages []Message, tem
 			})
 		}
 
-		raw, err := c.call(ctx, msgs, temperature)
+		raw, err := c.call(ctx, msgs, temperature, 450)
 		if err != nil {
 			return nil, err
 		}
@@ -101,12 +101,12 @@ type orResponse struct {
 	} `json:"error,omitempty"`
 }
 
-func (c *OpenRouterClient) call(ctx context.Context, messages []Message, temperature float64) (string, error) {
+func (c *OpenRouterClient) call(ctx context.Context, messages []Message, temperature float64, maxTokens int) (string, error) {
 	body, err := json.Marshal(orRequest{
 		Model:       c.model,
 		Messages:    messages,
 		Temperature: temperature,
-		MaxTokens:   400,
+		MaxTokens:   maxTokens,
 	})
 	if err != nil {
 		return "", err

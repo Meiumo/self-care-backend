@@ -26,7 +26,6 @@ type Session struct {
 	ResponseType     ResponseType
 	FollowupHours    *int
 	FollowupQuestion string
-	IsLiteMode       bool
 	// IsResumed is true when an existing today's session was returned instead of generating a new one.
 	IsResumed    bool
 	ChatMessages []Message // populated only when IsResumed == true
@@ -62,27 +61,18 @@ func (s *Service) Generate(
 		return resumed, nil
 	}
 
-	// 1. Lite Mode detection
-	liteMode, err := IsLiteMode(ctx, s.db, userID)
-	if err != nil {
-		liteMode = false // non-fatal
-	}
-
-	// 2. Dynamic context from user history
+	// 1. Dynamic context from user history
 	ctxText, err := s.ctx_bld.Build(ctx, userID)
 	if err != nil {
 		ctxText = "" // non-fatal: proceed without context
 	}
 
-	// 3. Select system prompt + lite mode modifier
+	// 2. Select system prompt
 	var systemPrompt string
 	if trigger.Response == ResponseInstant {
 		systemPrompt = SystemInstant
 	} else {
 		systemPrompt = SystemAdvice
-	}
-	if liteMode {
-		systemPrompt += LiteModeInstruction
 	}
 
 	// 3. Assemble messages
@@ -103,17 +93,15 @@ func (s *Service) Generate(
 		return nil, err
 	}
 
-	// 5. Resolve follow-up hours: disabled in lite mode; else use AI suggestion or default
+	// 5. Resolve follow-up hours
 	var followupHoursPtr *int
-	if !liteMode {
-		followupHours := trigger.FollowupHours
-		if aiResp.FollowupHours != nil && *aiResp.FollowupHours >= 1 && *aiResp.FollowupHours <= 12 {
-			followupHours = *aiResp.FollowupHours
-		}
-		if followupHours > 0 {
-			h := followupHours
-			followupHoursPtr = &h
-		}
+	followupHours := trigger.FollowupHours
+	if aiResp.FollowupHours != nil && *aiResp.FollowupHours >= 1 && *aiResp.FollowupHours <= 12 {
+		followupHours = *aiResp.FollowupHours
+	}
+	if followupHours > 0 {
+		h := followupHours
+		followupHoursPtr = &h
 	}
 
 	// 6. Persist session
@@ -128,7 +116,6 @@ func (s *Service) Generate(
 		ResponseType:     trigger.Response,
 		FollowupHours:    followupHoursPtr,
 		FollowupQuestion: aiResp.FollowupQuestion,
-		IsLiteMode:       liteMode,
 	}, nil
 }
 
@@ -234,16 +221,19 @@ func (s *Service) AnswerFollowup(
 // Chat handles one user message turn in a multi-turn live response session.
 // Returns the AI reply, how many user messages remain, and any error.
 func (s *Service) Chat(ctx context.Context, sessionID, userID int64, message string) (string, int, error) {
-	var eventTag, initialAI string
+	// Load session: event_tag for system prompt, user_note for original trigger context,
+	// ai_message for the first assistant turn.
+	var eventTag, initialAI, userNote string
 	if err := s.db.QueryRow(ctx,
-		`SELECT event_tag, ai_message FROM live_response_sessions WHERE id = $1 AND user_id = $2`,
+		`SELECT event_tag, ai_message, user_note FROM live_response_sessions WHERE id = $1 AND user_id = $2`,
 		sessionID, userID,
-	).Scan(&eventTag, &initialAI); err != nil {
+	).Scan(&eventTag, &initialAI, &userNote); err != nil {
 		return "", 0, err
 	}
 
+	// ORDER BY created_at, id guarantees stable order even when timestamps collide.
 	rows, err := s.db.Query(ctx,
-		`SELECT role, content FROM live_response_messages WHERE session_id = $1 ORDER BY created_at`,
+		`SELECT role, content FROM live_response_messages WHERE session_id = $1 ORDER BY created_at, id`,
 		sessionID,
 	)
 	if err != nil {
@@ -271,10 +261,21 @@ func (s *Service) Chat(ctx context.Context, sessionID, userID int64, message str
 		return "", 0, ErrMessageLimit
 	}
 
+	// Fresh user context (today's state, trends, insights) — same as Generate.
+	ctxText, _ := s.ctx_bld.Build(ctx, userID)
+
+	// Reconstruct the full conversation: system → user context → original trigger
+	// → first AI response → saved history → current message.
 	msgs := []Message{
 		{Role: "system", Content: SystemChat(eventTag)},
-		{Role: "assistant", Content: initialAI},
 	}
+	if ctxText != "" {
+		msgs = append(msgs, Message{Role: "system", Content: ctxText})
+	}
+	msgs = append(msgs,
+		Message{Role: "user", Content: BuildUserPrompt(eventTag, userNote)},
+		Message{Role: "assistant", Content: initialAI},
+	)
 	msgs = append(msgs, history...)
 	msgs = append(msgs, Message{Role: "user", Content: message})
 

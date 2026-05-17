@@ -25,7 +25,7 @@ func (s *Service) LRAccessMiddleware(next http.Handler) http.Handler {
 		if err != nil {
 			if errors.Is(err, ErrTrialExpiredAndLimitReached) {
 				respond.Error(w, http.StatusPaymentRequired,
-					"trial expired — upgrade to premium or wait for monthly reset")
+					"trial expired — upgrade to premium")
 				return
 			}
 			respond.Internal(w, err)
