@@ -31,5 +31,16 @@ func (h *Handler) status(w http.ResponseWriter, r *http.Request) {
 		respond.Internal(w, err)
 		return
 	}
-	respond.OK(w, st)
+	type resp struct {
+		InTrial       bool `json:"in_trial"`
+		TrialDayNum   int  `json:"trial_day_num"`
+		IsPremium     bool `json:"is_premium"`
+		FreeUsedMonth int  `json:"free_used_month"`
+	}
+	respond.OK(w, resp{
+		InTrial:       st.InTrial,
+		TrialDayNum:   st.TrialDayNum,
+		IsPremium:     st.IsPremium,
+		FreeUsedMonth: st.FreeUsedMonth,
+	})
 }

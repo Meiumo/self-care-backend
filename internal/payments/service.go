@@ -6,7 +6,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -52,26 +51,26 @@ func (s *Service) CreatePaymentURL(userID int64) string {
 }
 
 // HandleWebhook processes a Продамус payment webhook.
-// Продамус sends a POST with form data; payment_status == "success" means paid.
+// Продамус sends application/x-www-form-urlencoded; payment_status == "success" means paid.
 func (s *Service) HandleWebhook(ctx context.Context, payload []byte, sig string) error {
 	if !s.validSignature(payload, sig) {
 		return fmt.Errorf("webhook: invalid signature")
 	}
 
-	var event struct {
-		PaymentStatus  string `json:"payment_status"`
-		CustomerExtra  string `json:"customer_extra"` // our user_id
+	// Продамус sends form-encoded data, NOT JSON.
+	values, err := url.ParseQuery(string(payload))
+	if err != nil {
+		return fmt.Errorf("webhook: parse form: %w", err)
 	}
-	if err := json.Unmarshal(payload, &event); err != nil {
-		return err
-	}
-	if event.PaymentStatus != "success" {
+
+	if values.Get("payment_status") != "success" {
 		return nil
 	}
 
-	userID, err := strconv.ParseInt(event.CustomerExtra, 10, 64)
+	customerExtra := values.Get("customer_extra")
+	userID, err := strconv.ParseInt(customerExtra, 10, 64)
 	if err != nil || userID == 0 {
-		return fmt.Errorf("webhook: invalid customer_extra %q", event.CustomerExtra)
+		return fmt.Errorf("webhook: invalid customer_extra %q", customerExtra)
 	}
 
 	_, err = s.db.Exec(ctx,

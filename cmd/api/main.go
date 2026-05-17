@@ -72,7 +72,7 @@ func main() {
 
 	lrClient := liveresponse.NewOpenRouterClient(
 		os.Getenv("OPENROUTER_API_KEY"),
-		getenv("DEEPSEEK_MODEL", "deepseek/deepseek-chat"),
+		getenv("DEEPSEEK_MODEL", "deepseek/deepseek-v4-pro"),
 	)
 	lrSvc := liveresponse.NewService(db, lrClient)
 	lrHandler := liveresponse.NewHandler(lrSvc)
