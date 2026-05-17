@@ -36,11 +36,11 @@ type OpenRouterClient struct {
 
 func NewOpenRouterClient(apiKey, model string) *OpenRouterClient {
 	if model == "" {
-		model = "deepseek/deepseek-chat"
+		model = "deepseek/deepseek-v4-pro"
 	}
 	return &OpenRouterClient{
-		apiKey: apiKey,
-		model:  model,
+		apiKey:  apiKey,
+		model:   model,
 		httpCli: &http.Client{Timeout: 30 * time.Second},
 	}
 }
