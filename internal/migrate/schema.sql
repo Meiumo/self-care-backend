@@ -171,6 +171,11 @@ CREATE TABLE IF NOT EXISTS live_response_sessions (
 CREATE INDEX IF NOT EXISTS idx_live_sessions_user_created
     ON live_response_sessions(user_id, created_at DESC);
 
+-- Prevents two concurrent Generate calls for the same user+event on the same UTC day
+-- from both persisting separate sessions (race condition when first request times out).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_live_session_user_tag_day
+    ON live_response_sessions(user_id, event_tag, ts_to_date(created_at));
+
 -- Simple helpful / not-helpful feedback per session
 CREATE TABLE IF NOT EXISTS live_response_feedback (
     id         BIGSERIAL PRIMARY KEY,
@@ -187,10 +192,16 @@ CREATE TABLE IF NOT EXISTS followups (
     user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     scheduled_at TIMESTAMPTZ NOT NULL,
     status       TEXT NOT NULL DEFAULT 'pending'
-                     CHECK (status IN ('pending', 'answered_yes', 'answered_no', 'skipped')),
+                     CHECK (status IN ('pending', 'answered_yes', 'answered_no', 'skipped', 'declined')),
     answered_at  TIMESTAMPTZ,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Widen followups.status to include 'declined' (consent UI refusal) on existing DBs
+ALTER TABLE followups
+    DROP CONSTRAINT IF EXISTS followups_status_check,
+    ADD CONSTRAINT followups_status_check
+        CHECK (status IN ('pending', 'answered_yes', 'answered_no', 'skipped', 'declined'));
 
 CREATE INDEX IF NOT EXISTS idx_followups_user_scheduled
     ON followups(user_id, scheduled_at);
@@ -206,10 +217,16 @@ CREATE TABLE IF NOT EXISTS advice_outcomes (
     session_id      BIGINT NOT NULL REFERENCES live_response_sessions(id) ON DELETE CASCADE,
     advice_tag      TEXT NOT NULL,
     event_tag       TEXT NOT NULL,
-    followup_answer TEXT CHECK (followup_answer IN ('yes', 'no', 'skipped')),
+    followup_answer TEXT CHECK (followup_answer IN ('yes', 'no', 'skipped', 'declined')),
     next_day_mood   SMALLINT CHECK (next_day_mood BETWEEN 1 AND 10),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Widen advice_outcomes.followup_answer to include 'declined' on existing DBs
+ALTER TABLE advice_outcomes
+    DROP CONSTRAINT IF EXISTS advice_outcomes_followup_answer_check,
+    ADD CONSTRAINT advice_outcomes_followup_answer_check
+        CHECK (followup_answer IN ('yes', 'no', 'skipped', 'declined'));
 
 CREATE INDEX IF NOT EXISTS idx_advice_outcomes_user_tag
     ON advice_outcomes(user_id, advice_tag);
@@ -225,3 +242,129 @@ CREATE TABLE IF NOT EXISTS live_response_messages (
 
 CREATE INDEX IF NOT EXISTS idx_lr_messages_session
     ON live_response_messages(session_id, created_at);
+
+-- ─── Event types catalogue ─────────────────────────────────────────────────────
+-- Single source of truth for all loggable events.
+-- response_type: 'instant' = multi-turn chat, 'advice' = one-shot card, 'nothing' = log only.
+-- chips: list of quick-select clarification options shown in the UI.
+-- opener: first-turn prompt shown above the chat input for instant events.
+CREATE TABLE IF NOT EXISTS event_types (
+    name           TEXT PRIMARY KEY,
+    emoji          TEXT NOT NULL DEFAULT '',
+    response_type  TEXT NOT NULL DEFAULT 'advice'
+                       CHECK (response_type IN ('instant', 'advice', 'nothing')),
+    weight         SMALLINT NOT NULL DEFAULT 1,
+    followup_hours SMALLINT NOT NULL DEFAULT 0,
+    chips          TEXT[] NOT NULL DEFAULT '{}',
+    opener         TEXT NOT NULL DEFAULT '',
+    sort_order     INT NOT NULL DEFAULT 100
+);
+
+INSERT INTO event_types (name, emoji, response_type, weight, followup_hours, chips, opener, sort_order) VALUES
+  -- ── Instant: critical negative ──────────────────────────────────────────────
+  ('Конфликт',         '🤬', 'instant', 4, 1,
+   ARRAY['С коллегой','С руководителем','С клиентом','С командой'],
+   'Расскажи — что произошло?', 10),
+
+  ('Критика',          '😔', 'instant', 4, 1,
+   ARRAY['От руководителя','От коллег','Публичная','Несправедливая'],
+   'Что именно было сказано?', 20),
+
+  ('Тревога',          '😰', 'instant', 4, 1,
+   ARRAY['По работе','По задаче','Не знаю почему','Перед встречей'],
+   'Что тебя тревожит прямо сейчас?', 30),
+
+  ('Дедлайн',          '⏰', 'instant', 4, 2,
+   ARRAY['Горящий — сегодня','На этой неделе','Срывается','Внезапный'],
+   'Расскажи — что не успеваешь?', 40),
+
+  -- ── Instant: новые события ──────────────────────────────────────────────────
+  ('Выгораю',          '🔥', 'instant', 4, 2,
+   ARRAY['Нет мотивации','Всё раздражает','Чувствую пустоту','Не вижу смысла'],
+   'Что сейчас даётся тяжелее всего?', 50),
+
+  ('Некомфортно',      '😬', 'instant', 3, 2,
+   ARRAY['В общении','В команде','На встрече','Не понимаю почему'],
+   'Что именно ощущаешь?', 60),
+
+  ('Сложный разговор', '💬', 'instant', 3, 2,
+   ARRAY['С руководителем','С коллегой','С клиентом','Ещё предстоит'],
+   'Расскажи, что произошло?', 70),
+
+  ('Облажался',        '🤦', 'instant', 3, 2,
+   ARRAY['По задаче','Перед командой','Перед клиентом','Сам накосячил'],
+   'Расскажи, что случилось?', 80),
+
+  -- ── Instant: позитивные ─────────────────────────────────────────────────────
+  ('Решил сложную задачу', '💡', 'instant', 2, 2,
+   ARRAY['Сам разобрался','Нашёл оригинальное решение','Научился новому','Помогла команда'],
+   'Поделись — что это было?', 90),
+
+  ('Хорошая новость',  '🎉', 'instant', 2, 2,
+   ARRAY['По проекту','По карьере','По команде','Личная'],
+   'Что случилось?', 100),
+
+  -- ── Advice: высокая нагрузка ────────────────────────────────────────────────
+  ('Переработка',      '⏱', 'advice', 3, 8,
+   ARRAY['Задержался допоздна','Работал на выходных','Не мог остановиться','Задачи не кончаются'],
+   '', 110),
+
+  ('Недосып',          '😴', 'advice', 3, 6,
+   ARRAY['Меньше 6 часов','Не мог уснуть','Разбудили','Поздно лёг'],
+   '', 120),
+
+  ('Много задач',      '📋', 'advice', 3, 4,
+   ARRAY['Всё срочное','Не знаю с чего начать','Постоянно отвлекают','Не успеваю'],
+   '', 130),
+
+  ('Перегружен',       '🌊', 'advice', 3, 4,
+   ARRAY['Задачами','Информацией','Общением','Всем сразу'],
+   '', 140),
+
+  -- ── Advice: средняя нагрузка ────────────────────────────────────────────────
+  ('Нет сил',          '🪫', 'advice', 2, 4,
+   ARRAY['Физически','Морально','После совещаний','К концу дня'],
+   '', 150),
+
+  ('Устал',            '😩', 'advice', 2, 4,
+   ARRAY['От задач','От людей','От совещаний','Просто устал'],
+   '', 160),
+
+  ('Встреча с руководителем', '👔', 'advice', 2, 3,
+   ARRAY['Ожидаемая','Неожиданная','Оценка работы','Сложная тема'],
+   '', 170),
+
+  ('Переговоры',       '🤝', 'advice', 2, 3,
+   ARRAY['Внутренние','С клиентом','Сложные','Ещё предстоят'],
+   '', 180),
+
+  ('Не могу начать',   '🔄', 'advice', 2, 3,
+   ARRAY['Откладываю задачу','Не знаю с чего начать','Мешает тревога','Нет настроения'],
+   '', 190),
+
+  -- ── Advice: низкая нагрузка ─────────────────────────────────────────────────
+  ('Обратная связь',   '💬', 'advice', 1, 6,
+   ARRAY['Позитивная','Критическая','От руководителя','От команды'],
+   '', 200),
+
+  ('Скучно',           '😑', 'advice', 1, 12,
+   ARRAY['На работе','На встречах','Нет интересных задач','Монотонно'],
+   '', 210),
+
+  ('Другое',           '❓', 'instant', 1, 6,
+   ARRAY[]::TEXT[],
+   'Расскажи, что произошло?', 220),
+
+  -- ── Nothing: просто логируем ────────────────────────────────────────────────
+  ('Все как обычно',   '😐', 'nothing', 0, 0,  ARRAY[]::TEXT[], '', 230),
+  ('Похвала',          '🏅', 'nothing', 3, 0,
+   ARRAY['От руководителя','От коллег','Публичная','За проект'],
+   '', 240),
+  ('Командный успех',  '🏆', 'nothing', 3, 0,
+   ARRAY['Завершили проект','Важная победа','Хвалили команду','Закрыли квартал'],
+   '', 250),
+  ('Хороший день',     '🌟', 'nothing', 0, 0,  ARRAY[]::TEXT[], '', 260),
+  ('Сделал важное',    '✅', 'nothing', 1, 0,
+   ARRAY['Закончил задачу','Принял решение','Важный шаг','Закрыл проект'],
+   '', 270)
+ON CONFLICT (name) DO NOTHING;

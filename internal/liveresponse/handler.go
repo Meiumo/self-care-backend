@@ -23,6 +23,7 @@ func NewHandler(svc *Service) *Handler {
 
 func (h *Handler) Routes() http.Handler {
 	r := chi.NewRouter()
+	r.Get("/event-types", h.eventTypes)
 	r.Post("/", h.generate)
 	r.Post("/{id}/feedback", h.feedback)
 	r.Post("/{id}/followup", h.followup)
@@ -30,10 +31,61 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
+// GET /live-response/event-types
+func (h *Handler) eventTypes(w http.ResponseWriter, r *http.Request) {
+	all, err := h.svc.ListEventTypes(r.Context())
+	if err != nil {
+		respond.Internal(w, err)
+		return
+	}
+
+	type eventDTO struct {
+		Name          string   `json:"name"`
+		Emoji         string   `json:"emoji"`
+		Weight        int      `json:"weight"`
+		FollowupHours int      `json:"followup_hours"`
+		Chips         []string `json:"chips"`
+		Opener        string   `json:"opener,omitempty"`
+	}
+	type grouped struct {
+		Instant []eventDTO `json:"instant"`
+		Advice  []eventDTO `json:"advice"`
+		Nothing []eventDTO `json:"nothing"`
+	}
+
+	out := grouped{
+		Instant: []eventDTO{},
+		Advice:  []eventDTO{},
+		Nothing: []eventDTO{},
+	}
+	for _, et := range all {
+		chips := et.Chips
+		if chips == nil {
+			chips = []string{}
+		}
+		dto := eventDTO{
+			Name:          et.Name,
+			Emoji:         et.Emoji,
+			Weight:        et.Weight,
+			FollowupHours: et.FollowupHours,
+			Chips:         chips,
+			Opener:        et.Opener,
+		}
+		switch et.Response {
+		case ResponseInstant:
+			out.Instant = append(out.Instant, dto)
+		case ResponseAdvice:
+			out.Advice = append(out.Advice, dto)
+		default:
+			out.Nothing = append(out.Nothing, dto)
+		}
+	}
+	respond.OK(w, out)
+}
+
 // POST /live-response
 type generateRequest struct {
 	EventTag     string `json:"event_tag"`
-	EventWeight  int    `json:"event_weight"`
 	SelectedChip string `json:"selected_chip"`
 }
 
@@ -45,11 +97,23 @@ func (h *Handler) generate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	trigger := TriggerResult{
-		Tag:    req.EventTag,
-		Weight: req.EventWeight,
+	et, err := h.svc.FindEventType(r.Context(), req.EventTag)
+	if err != nil {
+		respond.Error(w, http.StatusNotFound, "unknown event_tag")
+		return
 	}
-	trigger.Response, trigger.FollowupHours = ResponseConfig(req.EventTag)
+	if et.Response == ResponseNothing {
+		respond.Error(w, http.StatusUnprocessableEntity, "event type does not generate a live response")
+		return
+	}
+
+	trigger := TriggerResult{
+		Tag:           et.Name,
+		Weight:        et.Weight,
+		Response:      et.Response,
+		FollowupHours: et.FollowupHours,
+		Opener:        et.Opener,
+	}
 
 	sess, err := h.svc.Generate(r.Context(), userID, trigger, req.SelectedChip)
 	if err != nil {
@@ -62,14 +126,16 @@ func (h *Handler) generate(w http.ResponseWriter, r *http.Request) {
 		Content string `json:"content"`
 	}
 	type resp struct {
-		SessionID        int64      `json:"session_id"`
-		Message          string     `json:"message"`
-		AdviceTags       []string   `json:"advice_tags"`
-		FollowupHours    *int       `json:"followup_hours"`
-		FollowupQuestion string     `json:"followup_question"`
-		IsResumed        bool       `json:"is_resumed"`
-		MessagesLeft     int        `json:"messages_left"`
-		Messages         []chatMsg  `json:"messages,omitempty"`
+		SessionID        int64     `json:"session_id"`
+		ResponseType     string    `json:"response_type"`
+		Message          string    `json:"message"`
+		AdviceTags       []string  `json:"advice_tags"`
+		FollowupHours    *int      `json:"followup_hours"`
+		FollowupQuestion string    `json:"followup_question"`
+		Opener           string    `json:"opener,omitempty"`
+		IsResumed        bool      `json:"is_resumed"`
+		MessagesLeft     int       `json:"messages_left"`
+		Messages         []chatMsg `json:"messages,omitempty"`
 	}
 
 	msgsLeft := maxChatUserMessages - sess.UserMsgCount
@@ -84,10 +150,12 @@ func (h *Handler) generate(w http.ResponseWriter, r *http.Request) {
 
 	respond.OK(w, resp{
 		SessionID:        sess.ID,
+		ResponseType:     sess.ResponseType.String(),
 		Message:          sess.AIResponse.Message,
 		AdviceTags:       sess.AIResponse.AdviceTags,
 		FollowupHours:    sess.FollowupHours,
 		FollowupQuestion: sess.FollowupQuestion,
+		Opener:           sess.Opener,
 		IsResumed:        sess.IsResumed,
 		MessagesLeft:     msgsLeft,
 		Messages:         chatMsgs,

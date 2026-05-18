@@ -10,14 +10,9 @@ import (
 // ErrMessageLimit is returned when the user has sent maxChatUserMessages in a session.
 var ErrMessageLimit = errors.New("message limit reached")
 
-// tempByType returns the inference temperature for each card variant.
-// Advice cards use lower temperature for more concrete, repeatable answers.
-func tempByType(rt ResponseType) float64 {
-	if rt == ResponseAdvice {
-		return 0.3
-	}
-	return 0.5
-}
+// ErrNothingEvent is returned when the caller tries to generate a response for a
+// "nothing" event type (events that are only logged, not AI-processed).
+var ErrNothingEvent = errors.New("event type does not generate a live response")
 
 // Session holds the saved session data returned after generation.
 type Session struct {
@@ -26,6 +21,7 @@ type Session struct {
 	ResponseType     ResponseType
 	FollowupHours    *int
 	FollowupQuestion string
+	Opener           string
 	// IsResumed is true when an existing today's session was returned instead of generating a new one.
 	IsResumed    bool
 	ChatMessages []Message // populated only when IsResumed == true
@@ -37,6 +33,7 @@ type Service struct {
 	db      *pgxpool.Pool
 	client  *OpenRouterClient
 	ctx_bld *ContextBuilder
+	evtRepo *EventTypeRepo
 }
 
 func NewService(db *pgxpool.Pool, client *OpenRouterClient) *Service {
@@ -44,20 +41,38 @@ func NewService(db *pgxpool.Pool, client *OpenRouterClient) *Service {
 		db:      db,
 		client:  client,
 		ctx_bld: NewContextBuilder(db),
+		evtRepo: NewEventTypeRepo(db),
 	}
+}
+
+// FindEventType loads a single event type by name.
+func (s *Service) FindEventType(ctx context.Context, name string) (*EventType, error) {
+	return s.evtRepo.FindByName(ctx, name)
+}
+
+// ListEventTypes returns all event types ordered by sort_order.
+func (s *Service) ListEventTypes(ctx context.Context) ([]*EventType, error) {
+	return s.evtRepo.All(ctx)
 }
 
 // Generate calls DeepSeek and saves the result to live_response_sessions.
 // If a session for the same event_tag already exists today, it is returned as-is
 // (IsResumed == true, ChatMessages populated) without calling DeepSeek again.
+// Returns ErrNothingEvent if the event type is ResponseNothing.
 func (s *Service) Generate(
 	ctx context.Context,
 	userID int64,
 	trigger TriggerResult,
 	selectedChip string,
 ) (*Session, error) {
+	if trigger.Response == ResponseNothing {
+		return nil, ErrNothingEvent
+	}
+
 	// 0. Resume today's existing session if one exists for this event_tag
 	if resumed, ok, err := s.tryResume(ctx, userID, trigger.Tag); err == nil && ok {
+		resumed.ResponseType = trigger.Response
+		resumed.Opener = trigger.Opener
 		return resumed, nil
 	}
 
@@ -104,9 +119,18 @@ func (s *Service) Generate(
 		followupHoursPtr = &h
 	}
 
-	// 6. Persist session
+	// 6. Persist session.
+	// Two concurrent requests for the same user+event_tag can both pass tryResume
+	// (neither has a saved session yet) and race to call DeepSeek. The unique index
+	// uq_live_session_user_tag_day ensures only one INSERT wins; the loser gets a
+	// conflict error, re-runs tryResume, and returns the already-saved session.
 	sessionID, err := s.saveSession(ctx, userID, trigger, selectedChip, aiResp, followupHoursPtr)
 	if err != nil {
+		if resumed, ok, rerr := s.tryResume(ctx, userID, trigger.Tag); rerr == nil && ok {
+			resumed.ResponseType = trigger.Response
+			resumed.Opener = trigger.Opener
+			return resumed, nil
+		}
 		return nil, err
 	}
 
@@ -116,6 +140,7 @@ func (s *Service) Generate(
 		ResponseType:     trigger.Response,
 		FollowupHours:    followupHoursPtr,
 		FollowupQuestion: aiResp.FollowupQuestion,
+		Opener:           trigger.Opener,
 	}, nil
 }
 

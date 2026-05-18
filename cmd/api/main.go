@@ -136,7 +136,7 @@ func main() {
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
 	r.Use(chimw.Recoverer)
-	r.Use(chimw.Timeout(30 * time.Second))
+	r.Use(chimw.Timeout(85 * time.Second))
 	r.Use(corsMiddleware)
 
 	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
@@ -167,7 +167,7 @@ func main() {
 	})
 
 	addr := ":" + getenv("PORT", "8080")
-	srv := &http.Server{Addr: addr, Handler: r, ReadTimeout: 10 * time.Second, WriteTimeout: 30 * time.Second}
+	srv := &http.Server{Addr: addr, Handler: r, ReadTimeout: 10 * time.Second, WriteTimeout: 90 * time.Second}
 
 	go func() {
 		log.Info("server started", "addr", addr)
