@@ -53,6 +53,33 @@ func (s *Service) GetStatus(ctx context.Context, userID int64) (*Status, error) 
 	return st, nil
 }
 
+// StartTrial activates the trial for a user who has never used Live Response.
+// Idempotent: if the trial is already started, returns the current status without error.
+func (s *Service) StartTrial(ctx context.Context, userID int64) (*Status, error) {
+	var isPremium bool
+	var trialStarted *time.Time
+	err := s.db.QueryRow(ctx,
+		`UPDATE users
+		 SET trial_started_at = COALESCE(trial_started_at, NOW())
+		 WHERE id = $1
+		 RETURNING is_premium, trial_started_at`,
+		userID,
+	).Scan(&isPremium, &trialStarted)
+	if err != nil {
+		return nil, err
+	}
+
+	st := &Status{IsPremium: isPremium, TrialStarted: trialStarted != nil}
+	if trialStarted != nil {
+		days := int(time.Since(*trialStarted).Hours()/24) + 1
+		if days <= TrialDays {
+			st.InTrial = true
+			st.TrialDayNum = days
+		}
+	}
+	return st, nil
+}
+
 // CheckAndConsumeLR verifies access for a Live Response request.
 // Starts the trial on first use. Returns ErrTrialExpiredAndLimitReached
 // when the user has neither an active trial nor a premium subscription.

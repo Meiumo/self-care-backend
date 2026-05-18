@@ -24,7 +24,7 @@ func (h *Handler) Routes(jwtSvc *jwtutil.Service) http.Handler {
 	r.Post("/register", h.register)
 	r.Post("/login", h.login)
 	r.Group(func(r chi.Router) {
-		r.Use(jwtSvc.MiddlewareWithVersionCheck(h.svc.VersionChecker()))
+		r.Use(jwtSvc.Middleware) // version check intentionally skipped: logout must work even with a stale token
 		r.Post("/logout", h.logout)
 	})
 	return r
