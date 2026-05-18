@@ -388,15 +388,15 @@ func (b *ContextBuilder) fetchCorrelations(ctx context.Context, userID int64) (s
 
 func (b *ContextBuilder) fetchBase(ctx context.Context, userID int64) (baseStats, error) {
 	var s baseStats
-	var firstAt time.Time
+	var firstAt *time.Time // pointer: MIN(created_at) is NULL when there are no entries
 	err := b.db.QueryRow(ctx,
 		`SELECT COUNT(*), MIN(created_at), COALESCE(AVG(score), 0)
 		 FROM mood_entries WHERE user_id = $1`,
 		userID,
 	).Scan(&s.totalEntries, &firstAt, &s.avgScore)
-	if err != nil || s.totalEntries == 0 {
+	if err != nil || s.totalEntries == 0 || firstAt == nil {
 		return s, err
 	}
-	s.daysActive = int(time.Since(firstAt).Hours()/24) + 1
+	s.daysActive = int(time.Since(*firstAt).Hours()/24) + 1
 	return s, nil
 }

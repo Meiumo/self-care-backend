@@ -43,7 +43,15 @@ jobs:
         run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u meiumo --password-stdin
 
       - name: Pull and restart
+        env:
+          APP_ENV: ${{ vars.APP_ENV || 'production' }}
         run: |
           cd /opt/selfcare/backend
+          # Sync APP_ENV from GitHub repository variable into .env
+          if grep -q "^APP_ENV=" .env 2>/dev/null; then
+            sed -i "s/^APP_ENV=.*/APP_ENV=${APP_ENV}/" .env
+          else
+            echo "APP_ENV=${APP_ENV}" >> .env
+          fi
           docker compose pull api
           docker compose up -d
