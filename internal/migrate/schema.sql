@@ -171,6 +171,15 @@ CREATE TABLE IF NOT EXISTS live_response_sessions (
 CREATE INDEX IF NOT EXISTS idx_live_sessions_user_created
     ON live_response_sessions(user_id, created_at DESC);
 
+-- Remove duplicate sessions (same user+event_tag+day) that accumulated before the
+-- unique index was added. Keeps the earliest session per group.
+DELETE FROM live_response_sessions dup
+USING live_response_sessions keeper
+WHERE dup.id > keeper.id
+  AND dup.user_id   = keeper.user_id
+  AND dup.event_tag = keeper.event_tag
+  AND ts_to_date(dup.created_at) = ts_to_date(keeper.created_at);
+
 -- Prevents two concurrent Generate calls for the same user+event on the same UTC day
 -- from both persisting separate sessions (race condition when first request times out).
 CREATE UNIQUE INDEX IF NOT EXISTS uq_live_session_user_tag_day
