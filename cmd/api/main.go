@@ -16,6 +16,7 @@ import (
 	"github.com/robfig/cron/v3"
 
 	"github.com/romangolovachev/selfcare/internal/analysis"
+	"github.com/romangolovachev/selfcare/pkg/respond"
 	"github.com/romangolovachev/selfcare/internal/auth"
 	"github.com/romangolovachev/selfcare/internal/liveresponse"
 	"github.com/romangolovachev/selfcare/internal/migrate"
@@ -32,6 +33,8 @@ import (
 
 func main() {
 	_ = godotenv.Load()
+
+	respond.SetDebugMode(os.Getenv("APP_ENV") == "preview")
 
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
