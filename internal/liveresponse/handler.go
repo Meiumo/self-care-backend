@@ -236,6 +236,10 @@ func (h *Handler) chat(w http.ResponseWriter, r *http.Request) {
 			respond.Error(w, http.StatusTooManyRequests, "message limit reached")
 			return
 		}
+		if errors.Is(err, ErrSessionNotFound) {
+			respond.Error(w, http.StatusNotFound, "session not found")
+			return
+		}
 		respond.Internal(w, err)
 		return
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -13,6 +14,9 @@ var ErrMessageLimit = errors.New("message limit reached")
 // ErrNothingEvent is returned when the caller tries to generate a response for a
 // "nothing" event type (events that are only logged, not AI-processed).
 var ErrNothingEvent = errors.New("event type does not generate a live response")
+
+// ErrSessionNotFound is returned when the session does not exist or belongs to another user.
+var ErrSessionNotFound = errors.New("session not found")
 
 // Session holds the saved session data returned after generation.
 type Session struct {
@@ -254,8 +258,12 @@ func (s *Service) Chat(ctx context.Context, sessionID, userID int64, message str
 		`SELECT event_tag, ai_message, user_note FROM live_response_sessions WHERE id = $1 AND user_id = $2`,
 		sessionID, userID,
 	).Scan(&eventTag, &initialAI, &userNote); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", 0, ErrSessionNotFound
+		}
 		return "", 0, err
 	}
+
 
 	// ORDER BY created_at, id guarantees stable order even when timestamps collide.
 	rows, err := s.db.Query(ctx,
