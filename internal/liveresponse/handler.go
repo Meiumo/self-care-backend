@@ -1,10 +1,12 @@
 package liveresponse
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
@@ -115,10 +117,23 @@ func (h *Handler) generate(w http.ResponseWriter, r *http.Request) {
 		Opener:        et.Opener,
 	}
 
-	sess, err := h.svc.Generate(r.Context(), userID, trigger, req.SelectedChip)
+	// Detach from the request context: if the client closes the view mid-flight,
+	// the DeepSeek call still completes and the result is saved to DB.
+	// On the next open, tryResume returns it instantly instead of calling DeepSeek again.
+	genCtx, genCancel := context.WithTimeout(context.WithoutCancel(r.Context()), 90*time.Second)
+	defer genCancel()
+
+	sess, err := h.svc.Generate(genCtx, userID, trigger, req.SelectedChip)
 	if err != nil {
+		if r.Context().Err() != nil {
+			return // client disconnected; generation may still be running in background
+		}
 		respond.Internal(w, err)
 		return
+	}
+
+	if r.Context().Err() != nil {
+		return // client disconnected after generation completed, nothing to write
 	}
 
 	type chatMsg struct {
@@ -208,13 +223,24 @@ func (h *Handler) chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reply, msgsLeft, err := h.svc.Chat(r.Context(), sessionID, userID, req.Message)
+	// Same detach pattern as generate: AI call + DB writes survive client disconnect.
+	chatCtx, chatCancel := context.WithTimeout(context.WithoutCancel(r.Context()), 90*time.Second)
+	defer chatCancel()
+
+	reply, msgsLeft, err := h.svc.Chat(chatCtx, sessionID, userID, req.Message)
 	if err != nil {
+		if r.Context().Err() != nil {
+			return
+		}
 		if errors.Is(err, ErrMessageLimit) {
 			respond.Error(w, http.StatusTooManyRequests, "message limit reached")
 			return
 		}
 		respond.Internal(w, err)
+		return
+	}
+
+	if r.Context().Err() != nil {
 		return
 	}
 
