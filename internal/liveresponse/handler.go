@@ -159,7 +159,7 @@ func (h *Handler) chat(w http.ResponseWriter, r *http.Request) {
 
 // POST /live-response/{id}/followup
 type followupRequest struct {
-	Answer      string `json:"answer"`       // "yes" | "no" | "skipped"
+	Answer      string `json:"answer"`       // "yes" | "no" | "skipped" | "declined"
 	ScheduledAt string `json:"scheduled_at"` // ISO-8601
 	RecheckChip string `json:"recheck_chip"` // optional chip chosen by user on "no" screen
 }
@@ -176,8 +176,8 @@ func (h *Handler) followup(w http.ResponseWriter, r *http.Request) {
 		respond.BadRequest(w, "invalid json")
 		return
 	}
-	if req.Answer != "yes" && req.Answer != "no" && req.Answer != "skipped" {
-		respond.BadRequest(w, "answer must be yes|no|skipped")
+	if req.Answer != "yes" && req.Answer != "no" && req.Answer != "skipped" && req.Answer != "declined" {
+		respond.BadRequest(w, "answer must be yes|no|skipped|declined")
 		return
 	}
 

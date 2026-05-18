@@ -166,9 +166,10 @@ func (s *Service) AnswerFollowup(
 	}
 
 	status := map[string]string{
-		"yes":     "answered_yes",
-		"no":      "answered_no",
-		"skipped": "skipped",
+		"yes":      "answered_yes",
+		"no":       "answered_no",
+		"skipped":  "skipped",
+		"declined": "declined",
 	}[input.Answer]
 	if status == "" {
 		status = "skipped"
