@@ -63,7 +63,8 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (*AuthResult, 
 		return nil, err
 	}
 
-	token, err := s.jwt.Sign(id)
+	// New users start at token_version = 1 (DB default).
+	token, err := s.jwt.Sign(id, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -84,9 +85,26 @@ func (s *Service) Login(ctx context.Context, email, password string) (*AuthResul
 		return nil, ErrInvalidCreds
 	}
 
-	token, err := s.jwt.Sign(u.ID)
+	token, err := s.jwt.Sign(u.ID, u.TokenVersion)
 	if err != nil {
 		return nil, err
 	}
 	return &AuthResult{Token: token, UserID: u.ID, Email: u.Email, Name: u.Name, IsPremium: u.IsPremium}, nil
+}
+
+// Logout invalidates all existing tokens for the user by bumping token_version.
+func (s *Service) Logout(ctx context.Context, userID int64) error {
+	_, err := s.repo.BumpTokenVersion(ctx, userID)
+	return err
+}
+
+// VersionChecker returns a jwtutil.VersionChecker that validates token_version against the DB.
+func (s *Service) VersionChecker() func(ctx context.Context, userID int64, tokenVersion int) bool {
+	return func(ctx context.Context, userID int64, tokenVersion int) bool {
+		current, err := s.repo.GetTokenVersion(ctx, userID)
+		if err != nil {
+			return false
+		}
+		return tokenVersion == current
+	}
 }

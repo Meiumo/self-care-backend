@@ -82,23 +82,26 @@ func (r *Repository) GetStats(ctx context.Context, userID int64) (*Stats, error)
 	}
 	defer rows.Close()
 
-	var dates []string
+	var dates []time.Time
 	for rows.Next() {
-		var d string
+		var d time.Time
 		if err := rows.Scan(&d); err != nil {
 			return nil, err
 		}
 		dates = append(dates, d)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
 	streak := 0
-	today := time.Now().UTC().Format("2006-01-02")
+	today := time.Now().UTC().Truncate(24 * time.Hour)
 	cursor := today
 	for _, d := range dates {
-		if d == cursor {
+		day := d.UTC().Truncate(24 * time.Hour)
+		if day.Equal(cursor) {
 			streak++
-			t, _ := time.Parse("2006-01-02", cursor)
-			cursor = t.AddDate(0, 0, -1).Format("2006-01-02")
+			cursor = cursor.AddDate(0, 0, -1)
 		} else {
 			break
 		}

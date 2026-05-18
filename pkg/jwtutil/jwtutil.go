@@ -15,7 +15,8 @@ type Service struct {
 }
 
 type Claims struct {
-	UserID int64 `json:"user_id"`
+	UserID       int64 `json:"user_id"`
+	TokenVersion int   `json:"tv"`
 	jwt.RegisteredClaims
 }
 
@@ -25,9 +26,10 @@ func New(secret string) *Service {
 	return &Service{secret: []byte(secret)}
 }
 
-func (s *Service) Sign(userID int64) (string, error) {
+func (s *Service) Sign(userID int64, tokenVersion int) (string, error) {
 	claims := Claims{
-		UserID: userID,
+		UserID:       userID,
+		TokenVersion: tokenVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * 24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -53,20 +55,36 @@ func (s *Service) Parse(tokenStr string) (*Claims, error) {
 	return claims, nil
 }
 
+// VersionChecker validates that the token version in the JWT matches the current
+// version stored in the database. Return false to reject the token.
+type VersionChecker func(ctx context.Context, userID int64, tokenVersion int) bool
+
 func (s *Service) Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		header := r.Header.Get("Authorization")
-		if !strings.HasPrefix(header, "Bearer ") {
-			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-			return
-		}
-		claims, err := s.Parse(strings.TrimPrefix(header, "Bearer "))
-		if err != nil {
-			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-			return
-		}
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, claims)))
-	})
+	return s.MiddlewareWithVersionCheck(nil)(next)
+}
+
+// MiddlewareWithVersionCheck returns a middleware that additionally validates
+// the token version via the provided checker (pass nil to skip version check).
+func (s *Service) MiddlewareWithVersionCheck(check VersionChecker) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			header := r.Header.Get("Authorization")
+			if !strings.HasPrefix(header, "Bearer ") {
+				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+				return
+			}
+			claims, err := s.Parse(strings.TrimPrefix(header, "Bearer "))
+			if err != nil {
+				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+				return
+			}
+			if check != nil && !check(r.Context(), claims.UserID, claims.TokenVersion) {
+				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+				return
+			}
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, claims)))
+		})
+	}
 }
 
 func UserID(ctx context.Context) int64 {

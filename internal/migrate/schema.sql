@@ -5,9 +5,12 @@ CREATE TABLE IF NOT EXISTS users (
     name          TEXT NOT NULL DEFAULT '',
     avatar_url    TEXT,
     is_premium    BOOLEAN NOT NULL DEFAULT FALSE,
+    token_version INT NOT NULL DEFAULT 1,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INT NOT NULL DEFAULT 1;
 
 CREATE TABLE IF NOT EXISTS mood_entries (
     id           BIGSERIAL PRIMARY KEY,

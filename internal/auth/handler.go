@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/romangolovachev/selfcare/pkg/jwtutil"
 	"github.com/romangolovachev/selfcare/pkg/respond"
 )
 
@@ -18,10 +19,14 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-func (h *Handler) Routes() http.Handler {
+func (h *Handler) Routes(jwtSvc *jwtutil.Service) http.Handler {
 	r := chi.NewRouter()
 	r.Post("/register", h.register)
 	r.Post("/login", h.login)
+	r.Group(func(r chi.Router) {
+		r.Use(jwtSvc.MiddlewareWithVersionCheck(h.svc.VersionChecker()))
+		r.Post("/logout", h.logout)
+	})
 	return r
 }
 
@@ -77,4 +82,13 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respond.OK(w, result)
+}
+
+func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
+	userID := jwtutil.UserID(r.Context())
+	if err := h.svc.Logout(r.Context(), userID); err != nil {
+		respond.Internal(w, err)
+		return
+	}
+	respond.OK(w, map[string]string{"message": "logged out"})
 }

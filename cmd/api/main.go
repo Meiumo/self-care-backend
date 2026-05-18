@@ -145,13 +145,13 @@ func main() {
 	})
 
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Mount("/auth", authHandler.Routes())
+		r.Mount("/auth", authHandler.Routes(jwtSvc))
 
 		// Продамус webhook — no JWT (Продамус calls it directly)
 		r.Mount("/payments/webhook", paymentsHandler.WebhookRoutes())
 
 		r.Group(func(r chi.Router) {
-			r.Use(jwtSvc.Middleware)
+			r.Use(jwtSvc.MiddlewareWithVersionCheck(authSvc.VersionChecker()))
 			r.Mount("/users", userHandler.Routes())
 			r.Mount("/moods", moodHandler.Routes())
 			r.Mount("/analysis", analysisHandler.Routes())
