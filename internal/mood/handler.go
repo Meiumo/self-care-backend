@@ -40,14 +40,15 @@ type createRequest struct {
 	Tags        []string `json:"tags"`
 }
 
-// @Summary      Создать запись настроения
+// @Summary      Create mood entry
+// @Description  Records a mood entry for today. Score 1–10, stress level 1–10, optional note and tags.
 // @Tags         moods
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        body  body      createRequest  true  "Данные настроения"
+// @Param        body  body      createRequest  true  "Mood data"
 // @Success      201   {object}  mood.Entry
-// @Failure      400   {object}  map[string]string
+// @Failure      400   {object}  map[string]string  "Invalid score or stress level"
 // @Router       /moods [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
@@ -75,11 +76,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	respond.Created(w, entry)
 }
 
-// @Summary      Список записей настроения
+// @Summary      List mood entries
+// @Description  Returns paginated mood history for the current user, newest first.
 // @Tags         moods
 // @Produce      json
 // @Security     BearerAuth
-// @Param        page  query     int  false  "Страница (по умолчанию 1)"
+// @Param        page  query     int  false  "Page number (default 1)"
 // @Success      200   {array}   mood.Entry
 // @Failure      500   {object}  map[string]string
 // @Router       /moods [get]
@@ -97,7 +99,8 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, entries)
 }
 
-// @Summary      Недельный отчёт
+// @Summary      Weekly mood report
+// @Description  Returns average scores and statistics for the past 7 days.
 // @Tags         moods
 // @Produce      json
 // @Security     BearerAuth
@@ -114,7 +117,8 @@ func (h *Handler) weekly(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, report)
 }
 
-// @Summary      Список тегов
+// @Summary      List available tags
+// @Description  Returns all mood tags available in the system.
 // @Tags         moods
 // @Produce      json
 // @Security     BearerAuth
@@ -130,12 +134,13 @@ func (h *Handler) tags(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, tags)
 }
 
-// @Summary      Запись настроения за сегодня
+// @Summary      Today's mood entry
+// @Description  Returns the mood entry logged today, or 404 if none has been created yet.
 // @Tags         moods
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  mood.Entry
-// @Failure      404  {object}  map[string]string
+// @Failure      404  {object}  map[string]string  "No entry today"
 // @Router       /moods/today [get]
 func (h *Handler) today(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
@@ -158,13 +163,14 @@ type patchRequest struct {
 	Tags        []string `json:"tags"`
 }
 
-// @Summary      Обновить запись настроения
+// @Summary      Update mood entry
+// @Description  Updates score, stress level, work hours, and tags for an existing entry.
 // @Tags         moods
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        id    path      int           true  "ID записи"
-// @Param        body  body      patchRequest  true  "Обновлённые данные"
+// @Param        id    path      int           true  "Entry ID"
+// @Param        body  body      patchRequest  true  "Updated mood data"
 // @Success      200   {object}  mood.Entry
 // @Failure      400   {object}  map[string]string
 // @Router       /moods/{id} [patch]

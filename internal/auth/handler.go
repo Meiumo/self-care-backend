@@ -36,14 +36,15 @@ type registerRequest struct {
 	Name     string `json:"name"`
 }
 
-// @Summary      Регистрация
+// @Summary      Register a new user
+// @Description  Creates a new account. Returns a JWT token and user ID.
 // @Tags         auth
 // @Accept       json
 // @Produce      json
-// @Param        body  body      registerRequest  true  "Email, пароль, имя"
+// @Param        body  body      registerRequest  true  "Email, password, display name"
 // @Success      201   {object}  AuthResult
-// @Failure      400   {object}  map[string]string
-// @Failure      409   {object}  map[string]string
+// @Failure      400   {object}  map[string]string  "Weak password or invalid email"
+// @Failure      409   {object}  map[string]string  "Email already registered"
 // @Router       /auth/register [post]
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 	var req registerRequest
@@ -71,14 +72,15 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
-// @Summary      Вход
+// @Summary      Log in
+// @Description  Authenticate with email and password. Returns a JWT token and user ID.
 // @Tags         auth
 // @Accept       json
 // @Produce      json
-// @Param        body  body      loginRequest  true  "Email и пароль"
+// @Param        body  body      loginRequest  true  "Email and password"
 // @Success      200   {object}  AuthResult
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
+// @Failure      400   {object}  map[string]string  "Invalid JSON"
+// @Failure      401   {object}  map[string]string  "Wrong email or password"
 // @Router       /auth/login [post]
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
@@ -98,7 +100,8 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, result)
 }
 
-// @Summary      Выход
+// @Summary      Log out
+// @Description  Invalidates the current JWT token by bumping the token version server-side.
 // @Tags         auth
 // @Produce      json
 // @Security     BearerAuth

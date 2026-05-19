@@ -24,12 +24,13 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
-// @Summary      Недельная карточка
+// @Summary      Get weekly card
+// @Description  Returns the AI-generated weekly card for the current user. Returns 404 if not yet computed (computed every Sunday).
 // @Tags         weekly-card
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  map[string]any
-// @Failure      404  {object}  map[string]string
+// @Failure      404  {object}  map[string]string  "Card not yet generated"
 // @Router       /weekly-card [get]
 // GET /api/v1/weekly-card
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {

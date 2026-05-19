@@ -32,11 +32,12 @@ func (h *Handler) WebhookRoutes() http.Handler {
 	return r
 }
 
-// @Summary      Создать ссылку на оплату
+// @Summary      Create payment link
+// @Description  Generates a Prodamus payment URL for the premium subscription. Redirect the user to the returned URL.
 // @Tags         payments
 // @Produce      json
 // @Security     BearerAuth
-// @Success      200  {object}  map[string]string
+// @Success      200  {object}  map[string]string  "payment_url"
 // @Failure      500  {object}  map[string]string
 // @Router       /payments/create [post]
 // POST /api/v1/payments/create
@@ -46,12 +47,13 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, map[string]string{"payment_url": payURL})
 }
 
-// @Summary      Webhook оплаты (Prodamus)
+// @Summary      Payment webhook (Prodamus)
+// @Description  Called by Prodamus after a successful payment to activate premium for the user. Validates HMAC signature.
 // @Tags         payments
 // @Accept       application/octet-stream
-// @Param        X-Signature  header  string  true  "Подпись запроса"
+// @Param        X-Signature  header  string  true  "HMAC request signature"
 // @Success      200
-// @Failure      400  {object}  map[string]string
+// @Failure      400  {object}  map[string]string  "Invalid signature or body"
 // @Router       /payments/webhook [post]
 // POST /api/v1/payments/webhook
 func (h *Handler) webhook(w http.ResponseWriter, r *http.Request) {

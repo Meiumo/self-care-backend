@@ -24,7 +24,8 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
-// @Summary      Начать пробный период
+// @Summary      Start free trial
+// @Description  Activates a free trial for the user. Has no effect if the trial was already used.
 // @Tags         subscription
 // @Produce      json
 // @Security     BearerAuth
@@ -53,7 +54,8 @@ func (h *Handler) startTrial(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// @Summary      Статус подписки
+// @Summary      Subscription status
+// @Description  Returns current trial and premium status: whether in trial, trial day number, and whether premium is active.
 // @Tags         subscription
 // @Produce      json
 // @Security     BearerAuth

@@ -25,7 +25,8 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
-// @Summary      Инсайты пользователя
+// @Summary      Get AI insights
+// @Description  Returns the latest AI-generated insight report for the current user based on mood history.
 // @Tags         analysis
 // @Produce      json
 // @Security     BearerAuth
@@ -42,7 +43,8 @@ func (h *Handler) insights(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, report)
 }
 
-// @Summary      История инсайтов
+// @Summary      Insights history
+// @Description  Returns all previously generated insight reports for the current user, newest first.
 // @Tags         analysis
 // @Produce      json
 // @Security     BearerAuth
@@ -59,7 +61,8 @@ func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, items)
 }
 
-// @Summary      Обновить инсайты
+// @Summary      Regenerate insights
+// @Description  Triggers immediate AI regeneration for the current user and returns the new report.
 // @Tags         analysis
 // @Produce      json
 // @Security     BearerAuth

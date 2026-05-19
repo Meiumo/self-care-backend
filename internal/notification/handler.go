@@ -27,7 +27,8 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
-// @Summary      Список уведомлений
+// @Summary      List notifications
+// @Description  Returns all notifications for the current user, newest first.
 // @Tags         notifications
 // @Produce      json
 // @Security     BearerAuth
@@ -44,7 +45,8 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, notifs)
 }
 
-// @Summary      Количество непрочитанных уведомлений
+// @Summary      Unread notification count
+// @Description  Returns the number of unread notifications for the current user.
 // @Tags         notifications
 // @Produce      json
 // @Security     BearerAuth
@@ -60,7 +62,8 @@ func (h *Handler) unreadCount(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, map[string]int{"count": count})
 }
 
-// @Summary      Прочитать все уведомления
+// @Summary      Mark all notifications as read
+// @Description  Sets read=true on all notifications for the current user.
 // @Tags         notifications
 // @Security     BearerAuth
 // @Success      204
@@ -74,10 +77,11 @@ func (h *Handler) readAll(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// @Summary      Прочитать уведомление
+// @Summary      Mark notification as read
+// @Description  Marks a single notification as read.
 // @Tags         notifications
 // @Security     BearerAuth
-// @Param        id   path  int  true  "ID уведомления"
+// @Param        id   path  int  true  "Notification ID"
 // @Success      204
 // @Failure      400  {object}  map[string]string
 // @Router       /notifications/{id}/read [patch]

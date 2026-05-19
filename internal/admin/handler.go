@@ -72,7 +72,8 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
-// @Summary      Статистика (admin)
+// @Summary      Platform statistics
+// @Description  Returns aggregate platform stats: total users, active today, premium count, mood entries, and more.
 // @Tags         admin
 // @Produce      json
 // @Security     BearerAuth
@@ -89,7 +90,8 @@ func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, s)
 }
 
-// @Summary      Список пользователей (admin)
+// @Summary      List all users
+// @Description  Returns a full list of users with their roles, subscription status, and registration date.
 // @Tags         admin
 // @Produce      json
 // @Security     BearerAuth
@@ -287,11 +289,12 @@ func (h *Handler) testFollowup(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// @Summary      Лог ошибок (admin)
+// @Summary      Error log
+// @Description  Returns recent application errors logged to the database, including request ID, path, status, and stack trace.
 // @Tags         admin
 // @Produce      json
 // @Security     BearerAuth
-// @Param        limit  query     int  false  "Лимит (макс. 1000, по умолчанию 100)"
+// @Param        limit  query     int  false  "Max entries to return (default 100, max 1000)"
 // @Success      200    {array}   admin.ErrorEntry
 // @Failure      403    {object}  map[string]string
 // @Router       /admin/errors [get]

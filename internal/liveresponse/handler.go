@@ -33,7 +33,8 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
-// @Summary      Типы событий
+// @Summary      List event types
+// @Description  Returns all available event types grouped by response type: instant (AI message immediately), advice (tips), nothing (no response).
 // @Tags         live-response
 // @Produce      json
 // @Security     BearerAuth
@@ -98,16 +99,17 @@ type generateRequest struct {
 	SelectedChip string `json:"selected_chip"`
 }
 
-// @Summary      Генерация live-response
+// @Summary      Generate live response
+// @Description  Triggers an AI response for the given event. If a session already exists today for this event, returns it immediately (resume). Requires active trial or premium.
 // @Tags         live-response
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        body  body      generateRequest  true  "Тег события и чип"
+// @Param        body  body      generateRequest  true  "Event tag and optional chip"
 // @Success      200   {object}  map[string]any
-// @Failure      400   {object}  map[string]string
-// @Failure      402   {object}  map[string]string
-// @Failure      422   {object}  map[string]string
+// @Failure      400   {object}  map[string]string  "Missing event_tag"
+// @Failure      402   {object}  map[string]string  "No active subscription"
+// @Failure      422   {object}  map[string]string  "Event type has no AI response"
 // @Router       /live-response [post]
 func (h *Handler) generate(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
@@ -200,13 +202,14 @@ type feedbackRequest struct {
 	IsHelpful bool `json:"is_helpful"`
 }
 
-// @Summary      Оставить отзыв на сессию
+// @Summary      Submit session feedback
+// @Description  Records whether the AI response was helpful. Used to improve future responses.
 // @Tags         live-response
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        id    path      int              true  "ID сессии"
-// @Param        body  body      feedbackRequest  true  "Полезно или нет"
+// @Param        id    path      int              true  "Session ID"
+// @Param        body  body      feedbackRequest  true  "Helpful or not"
 // @Success      200   {object}  map[string]string
 // @Router       /live-response/{id}/feedback [post]
 func (h *Handler) feedback(w http.ResponseWriter, r *http.Request) {
@@ -233,17 +236,18 @@ type chatRequest struct {
 	Message string `json:"message"`
 }
 
-// @Summary      Сообщение в чат
+// @Summary      Send chat message
+// @Description  Sends a follow-up message in an existing session. Max 500 characters per message, up to 5 user messages per session.
 // @Tags         live-response
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        id    path      int          true  "ID сессии"
-// @Param        body  body      chatRequest  true  "Сообщение пользователя"
+// @Param        id    path      int          true  "Session ID"
+// @Param        body  body      chatRequest  true  "User message"
 // @Success      200   {object}  map[string]any
-// @Failure      400   {object}  map[string]string
-// @Failure      404   {object}  map[string]string
-// @Failure      429   {object}  map[string]string
+// @Failure      400   {object}  map[string]string  "Empty or too long message"
+// @Failure      404   {object}  map[string]string  "Session not found"
+// @Failure      429   {object}  map[string]string  "Message limit reached"
 // @Router       /live-response/{id}/chat [post]
 func (h *Handler) chat(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
@@ -301,15 +305,16 @@ type followupRequest struct {
 	RecheckChip string `json:"recheck_chip"` // optional chip chosen by user on "no" screen
 }
 
-// @Summary      Ответить на follow-up
+// @Summary      Answer follow-up check-in
+// @Description  Records the user's response to the follow-up notification sent hours after the original session. Answer must be yes|no|skipped|declined.
 // @Tags         live-response
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        id    path      int              true  "ID сессии"
-// @Param        body  body      followupRequest  true  "Ответ на follow-up"
+// @Param        id    path      int              true  "Session ID"
+// @Param        body  body      followupRequest  true  "Follow-up answer"
 // @Success      200   {object}  map[string]any
-// @Failure      400   {object}  map[string]string
+// @Failure      400   {object}  map[string]string  "Invalid answer value"
 // @Router       /live-response/{id}/followup [post]
 func (h *Handler) followup(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())

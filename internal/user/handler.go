@@ -27,7 +27,8 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
-// @Summary      Профиль текущего пользователя
+// @Summary      Get current user profile
+// @Description  Returns the profile of the authenticated user.
 // @Tags         users
 // @Produce      json
 // @Security     BearerAuth
@@ -49,11 +50,12 @@ type updateRequest struct {
 	AvatarURL string `json:"avatar_url"`
 }
 
-// @Summary      Обновить профиль
+// @Summary      Update profile
+// @Description  Updates the display name and avatar URL of the current user.
 // @Tags         users
 // @Accept       json
 // @Security     BearerAuth
-// @Param        body  body  updateRequest  true  "Имя и аватар"
+// @Param        body  body  updateRequest  true  "Name and avatar URL"
 // @Success      204
 // @Failure      400  {object}  map[string]string
 // @Router       /users/me [put]
@@ -71,7 +73,8 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// @Summary      Статистика пользователя
+// @Summary      User activity stats
+// @Description  Returns streak, total entries logged, and other activity statistics for the current user.
 // @Tags         users
 // @Produce      json
 // @Security     BearerAuth

@@ -163,6 +163,9 @@ func main() {
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 
+	r.Get("/docs", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
+	})
 	r.Get("/docs/*", httpSwagger.WrapHandler)
 
 	r.Route("/api/v1", func(r chi.Router) {
