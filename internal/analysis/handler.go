@@ -31,6 +31,7 @@ func (h *Handler) Routes() http.Handler {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  map[string]any
+// @Failure      401  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /analysis/insights [get]
 func (h *Handler) insights(w http.ResponseWriter, r *http.Request) {
@@ -49,6 +50,7 @@ func (h *Handler) insights(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {array}   map[string]any
+// @Failure      401  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /analysis/history [get]
 func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
@@ -67,6 +69,7 @@ func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  map[string]any
+// @Failure      401  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /analysis/insights/refresh [post]
 // refresh triggers insight regeneration for the current user only (for testing).

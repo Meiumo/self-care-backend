@@ -33,6 +33,7 @@ func (h *Handler) Routes() http.Handler {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {array}   map[string]any
+// @Failure      401  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /notifications [get]
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
@@ -51,6 +52,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  map[string]int
+// @Failure      401  {object}  map[string]string
 // @Router       /notifications/unread-count [get]
 func (h *Handler) unreadCount(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
@@ -67,6 +69,7 @@ func (h *Handler) unreadCount(w http.ResponseWriter, r *http.Request) {
 // @Tags         notifications
 // @Security     BearerAuth
 // @Success      204
+// @Failure      401  {object}  map[string]string
 // @Router       /notifications/read-all [post]
 func (h *Handler) readAll(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
@@ -84,6 +87,7 @@ func (h *Handler) readAll(w http.ResponseWriter, r *http.Request) {
 // @Param        id   path  int  true  "Notification ID"
 // @Success      204
 // @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
 // @Router       /notifications/{id}/read [patch]
 func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())

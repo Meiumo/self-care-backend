@@ -33,6 +33,7 @@ func (h *Handler) Routes() http.Handler {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  user.DBUser
+// @Failure      401  {object}  map[string]string
 // @Failure      404  {object}  map[string]string
 // @Router       /users/me [get]
 func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
@@ -58,6 +59,7 @@ type updateRequest struct {
 // @Param        body  body  updateRequest  true  "Name and avatar URL"
 // @Success      204
 // @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
 // @Router       /users/me [put]
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
@@ -79,6 +81,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  user.Stats
+// @Failure      401  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /users/me/stats [get]
 func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
@@ -95,6 +98,16 @@ type setPremiumRequest struct {
 	Premium bool `json:"premium"`
 }
 
+// @Summary      Set own premium status
+// @Description  Activates or deactivates premium for the current user (self-serve endpoint, typically for testing).
+// @Tags         users
+// @Accept       json
+// @Security     BearerAuth
+// @Param        body  body  setPremiumRequest  true  "Premium flag"
+// @Success      204
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Router       /users/me/premium [post]
 func (h *Handler) setPremium(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	var req setPremiumRequest

@@ -38,6 +38,7 @@ func (h *Handler) WebhookRoutes() http.Handler {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  map[string]string  "payment_url"
+// @Failure      401  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /payments/create [post]
 // POST /api/v1/payments/create

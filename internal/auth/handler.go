@@ -106,6 +106,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /auth/logout [post]
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {

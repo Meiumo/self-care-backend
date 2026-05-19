@@ -39,6 +39,7 @@ func (h *Handler) Routes() http.Handler {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  map[string]any
+// @Failure      401  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /live-response/event-types [get]
 // GET /live-response/event-types
@@ -109,6 +110,7 @@ type generateRequest struct {
 // @Success      200   {object}  map[string]any
 // @Failure      400   {object}  map[string]string  "Missing event_tag"
 // @Failure      402   {object}  map[string]string  "No active subscription"
+// @Failure      401   {object}  map[string]string
 // @Failure      422   {object}  map[string]string  "Event type has no AI response"
 // @Router       /live-response [post]
 func (h *Handler) generate(w http.ResponseWriter, r *http.Request) {
@@ -211,6 +213,7 @@ type feedbackRequest struct {
 // @Param        id    path      int              true  "Session ID"
 // @Param        body  body      feedbackRequest  true  "Helpful or not"
 // @Success      200   {object}  map[string]string
+// @Failure      401   {object}  map[string]string
 // @Router       /live-response/{id}/feedback [post]
 func (h *Handler) feedback(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
@@ -247,6 +250,7 @@ type chatRequest struct {
 // @Success      200   {object}  map[string]any
 // @Failure      400   {object}  map[string]string  "Empty or too long message"
 // @Failure      404   {object}  map[string]string  "Session not found"
+// @Failure      401   {object}  map[string]string
 // @Failure      429   {object}  map[string]string  "Message limit reached"
 // @Router       /live-response/{id}/chat [post]
 func (h *Handler) chat(w http.ResponseWriter, r *http.Request) {
@@ -315,6 +319,7 @@ type followupRequest struct {
 // @Param        body  body      followupRequest  true  "Follow-up answer"
 // @Success      200   {object}  map[string]any
 // @Failure      400   {object}  map[string]string  "Invalid answer value"
+// @Failure      401   {object}  map[string]string
 // @Router       /live-response/{id}/followup [post]
 func (h *Handler) followup(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())

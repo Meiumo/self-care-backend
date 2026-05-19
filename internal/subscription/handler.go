@@ -30,6 +30,7 @@ func (h *Handler) Routes() http.Handler {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  map[string]any
+// @Failure      401  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /subscription/start-trial [post]
 // POST /api/v1/subscription/start-trial
@@ -60,6 +61,7 @@ func (h *Handler) startTrial(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  map[string]any
+// @Failure      401  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /subscription/status [get]
 // GET /api/v1/subscription/status

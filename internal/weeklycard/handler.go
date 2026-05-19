@@ -30,6 +30,7 @@ func (h *Handler) Routes() http.Handler {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  map[string]any
+// @Failure      401  {object}  map[string]string
 // @Failure      404  {object}  map[string]string  "Card not yet generated"
 // @Router       /weekly-card [get]
 // GET /api/v1/weekly-card

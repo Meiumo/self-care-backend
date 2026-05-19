@@ -49,6 +49,7 @@ type createRequest struct {
 // @Param        body  body      createRequest  true  "Mood data"
 // @Success      201   {object}  mood.Entry
 // @Failure      400   {object}  map[string]string  "Invalid score or stress level"
+// @Failure      401   {object}  map[string]string
 // @Router       /moods [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
@@ -83,6 +84,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Param        page  query     int  false  "Page number (default 1)"
 // @Success      200   {array}   mood.Entry
+// @Failure      401   {object}  map[string]string
 // @Failure      500   {object}  map[string]string
 // @Router       /moods [get]
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
@@ -105,6 +107,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  mood.WeeklyReport
+// @Failure      401  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /moods/weekly [get]
 func (h *Handler) weekly(w http.ResponseWriter, r *http.Request) {
@@ -123,6 +126,7 @@ func (h *Handler) weekly(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {array}   string
+// @Failure      401  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /moods/tags [get]
 func (h *Handler) tags(w http.ResponseWriter, r *http.Request) {
@@ -140,6 +144,7 @@ func (h *Handler) tags(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  mood.Entry
+// @Failure      401  {object}  map[string]string
 // @Failure      404  {object}  map[string]string  "No entry today"
 // @Router       /moods/today [get]
 func (h *Handler) today(w http.ResponseWriter, r *http.Request) {
@@ -173,6 +178,7 @@ type patchRequest struct {
 // @Param        body  body      patchRequest  true  "Updated mood data"
 // @Success      200   {object}  mood.Entry
 // @Failure      400   {object}  map[string]string
+// @Failure      401   {object}  map[string]string
 // @Router       /moods/{id} [patch]
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())

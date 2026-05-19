@@ -111,7 +111,18 @@ func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, users)
 }
 
-// PATCH /admin/users/{id}/premium  body: {"premium": true}
+// @Summary      Set user premium
+// @Description  Grants or revokes premium access for the specified user.
+// @Tags         admin
+// @Accept       json
+// @Security     BearerAuth
+// @Param        id    path  int                        true  "User ID"
+// @Param        body  body  object{premium=bool}       true  "Premium flag"
+// @Success      204
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Router       /admin/users/{id}/premium [post]
 func (h *Handler) setPremium(w http.ResponseWriter, r *http.Request) {
 	userID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
@@ -132,7 +143,18 @@ func (h *Handler) setPremium(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// PATCH /admin/users/{id}/admin  body: {"admin": true}
+// @Summary      Set user admin role
+// @Description  Grants or revokes admin role for the specified user.
+// @Tags         admin
+// @Accept       json
+// @Security     BearerAuth
+// @Param        id    path  int                   true  "User ID"
+// @Param        body  body  object{admin=bool}    true  "Admin flag"
+// @Success      204
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Router       /admin/users/{id}/admin [patch]
 func (h *Handler) setAdmin(w http.ResponseWriter, r *http.Request) {
 	userID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
@@ -153,7 +175,18 @@ func (h *Handler) setAdmin(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// POST /admin/notifications/test  body: {"user_id":1,"type":"mood_reminder","title":"Тест","body":"Тестовое уведомление"}
+// @Summary      Send test notification
+// @Description  Sends a push notification to a specific user for testing. Default type is mood_reminder.
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      object{user_id=int,type=string,title=string,body=string}  true  "Notification payload"
+// @Success      200  {object}  map[string]string
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Router       /admin/notifications/test [post]
 func (h *Handler) testNotification(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		UserID int64  `json:"user_id"`
@@ -175,25 +208,56 @@ func (h *Handler) testNotification(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, map[string]string{"status": "sent"})
 }
 
-// POST /admin/notifications/reminders — trigger daily reminders now
+// @Summary      Trigger daily reminders
+// @Description  Runs the daily reminder job immediately in the background.
+// @Tags         admin
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Router       /admin/notifications/reminders [post]
 func (h *Handler) triggerReminders(w http.ResponseWriter, r *http.Request) {
 	go h.notif.SendDailyReminders(context.Background())
 	respond.OK(w, map[string]string{"status": "triggered"})
 }
 
-// POST /admin/analysis/regen — regenerate all insight reports
+// @Summary      Regenerate all insights
+// @Description  Triggers AI insight regeneration for all users in the background.
+// @Tags         admin
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Router       /admin/analysis/regen [post]
 func (h *Handler) regenAnalysis(w http.ResponseWriter, r *http.Request) {
 	go h.analysis.RegenerateAll(context.Background())
 	respond.OK(w, map[string]string{"status": "triggered"})
 }
 
-// POST /admin/weekly-card/regen — regenerate all weekly cards
+// @Summary      Regenerate all weekly cards
+// @Description  Triggers weekly card recomputation for all users in the background.
+// @Tags         admin
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Router       /admin/weekly-card/regen [post]
 func (h *Handler) regenWeeklyCard(w http.ResponseWriter, r *http.Request) {
 	go h.wc.ComputeAll(context.Background())
 	respond.OK(w, map[string]string{"status": "triggered"})
 }
 
-// POST /admin/weekly-card/recompute — recompute card for the calling admin user
+// @Summary      Recompute my weekly card
+// @Description  Recomputes the weekly card for the calling admin user immediately.
+// @Tags         admin
+// @Security     BearerAuth
+// @Success      204
+// @Failure      401  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Router       /admin/weekly-card/recompute [post]
 func (h *Handler) recomputeWeeklyCard(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	if err := h.wc.ComputeForUser(r.Context(), userID); err != nil {
@@ -203,9 +267,19 @@ func (h *Handler) recomputeWeeklyCard(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// POST /admin/live-response/trigger
-// body: {"user_id":1,"event_tag":"Конфликт","selected_chip":"С коллегой","force":true}
-// force=true deletes today's existing session for that user+tag before generating.
+// @Summary      Trigger live response for user
+// @Description  Manually generates a live-response session for a specific user and event type. Use force=true to reset an existing session for today.
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      object{user_id=int,event_tag=string,selected_chip=string,force=bool}  true  "Trigger payload"
+// @Success      200  {object}  map[string]any
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Failure      404  {object}  map[string]string  "Unknown event_tag"
+// @Router       /admin/live-response/trigger [post]
 func (h *Handler) triggerLR(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		UserID       int64  `json:"user_id"`
@@ -255,10 +329,18 @@ func (h *Handler) triggerLR(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// POST /admin/live-response/test-followup
-// body: {"event_tag": "Конфликт", "delay_seconds": 30}
-// Creates a fake session (no AI call) and returns an absolute followup_at timestamp.
-// The client passes followup_at directly to Notifee instead of computing now+followup_hours.
+// @Summary      Test follow-up notification
+// @Description  Creates a fake session (no AI call) and returns a followup_at timestamp for testing push notification scheduling. Default delay is 30 seconds.
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      object{event_tag=string,delay_seconds=int}  true  "Test payload"
+// @Success      200  {object}  map[string]any
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Router       /admin/live-response/test-followup [post]
 func (h *Handler) testFollowup(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		EventTag     string `json:"event_tag"`
