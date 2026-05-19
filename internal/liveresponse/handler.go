@@ -178,7 +178,7 @@ func (h *Handler) generate(w http.ResponseWriter, r *http.Request) {
 
 	var chatMsgs []chatMsg
 	for _, m := range sess.ChatMessages {
-		chatMsgs = append(chatMsgs, chatMsg{Role: m.Role, Content: m.Content})
+		chatMsgs = append(chatMsgs, chatMsg(m))
 	}
 
 	respond.OK(w, resp{
@@ -328,11 +328,7 @@ func (h *Handler) followup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.svc.AnswerFollowup(r.Context(), sessionID, userID, FollowupAnswer{
-		Answer:      req.Answer,
-		ScheduledAt: req.ScheduledAt,
-		RecheckChip: req.RecheckChip,
-	})
+	result, err := h.svc.AnswerFollowup(r.Context(), sessionID, userID, FollowupAnswer(req))
 	if err != nil {
 		respond.Internal(w, r, err)
 		return

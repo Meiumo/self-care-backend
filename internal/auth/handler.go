@@ -51,11 +51,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		respond.BadRequest(w, "invalid json")
 		return
 	}
-	result, err := h.svc.Register(r.Context(), RegisterInput{
-		Email:    req.Email,
-		Password: req.Password,
-		Name:     req.Name,
-	})
+	result, err := h.svc.Register(r.Context(), RegisterInput(req))
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrEmailTaken):

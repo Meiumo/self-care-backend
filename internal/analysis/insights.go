@@ -79,7 +79,7 @@ func scoreToLevel(score int) float64 {
 	return float64(score) / 2.0 // 1.0–5.0 display range
 }
 
-func computeInsights(entries []entryData, tpl Templates) InsightReport {
+func computeInsights(entries []entryData, tpl Templates) InsightReport { //nolint:gocyclo
 	if len(entries) == 0 {
 		nd := tpl.Insights["no_data"]
 		return InsightReport{

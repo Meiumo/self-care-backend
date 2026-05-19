@@ -22,7 +22,7 @@ func NewContextBuilder(db *pgxpool.Pool) *ContextBuilder {
 // Build returns the context prompt string for the given user.
 // Returns empty string if there is no data — the system prompt is still valid.
 // Called for both Generate and Chat so context is always fresh.
-func (b *ContextBuilder) Build(ctx context.Context, userID int64) (string, error) {
+func (b *ContextBuilder) Build(ctx context.Context, userID int64) (string, error) { //nolint:gocyclo
 	base, err := b.fetchBase(ctx, userID)
 	if err != nil || base.totalEntries == 0 {
 		return "", err
