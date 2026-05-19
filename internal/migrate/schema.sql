@@ -258,12 +258,22 @@ CREATE INDEX IF NOT EXISTS idx_lr_messages_session
 
 -- ─── Admin error log ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS error_log (
-    id         BIGSERIAL PRIMARY KEY,
-    method     TEXT NOT NULL DEFAULT '',
-    path       TEXT NOT NULL DEFAULT '',
-    status     INT  NOT NULL DEFAULT 500,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id            BIGSERIAL PRIMARY KEY,
+    method        TEXT NOT NULL DEFAULT '',
+    path          TEXT NOT NULL DEFAULT '',
+    status        INT  NOT NULL DEFAULT 500,
+    request_id    TEXT,
+    ip            TEXT,
+    user_agent    TEXT,
+    error_message TEXT,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Backfill new columns on existing deployments
+ALTER TABLE error_log ADD COLUMN IF NOT EXISTS request_id    TEXT;
+ALTER TABLE error_log ADD COLUMN IF NOT EXISTS ip            TEXT;
+ALTER TABLE error_log ADD COLUMN IF NOT EXISTS user_agent    TEXT;
+ALTER TABLE error_log ADD COLUMN IF NOT EXISTS error_message TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_error_log_created ON error_log(created_at DESC);
 

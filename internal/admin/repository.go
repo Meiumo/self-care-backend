@@ -93,16 +93,20 @@ func (r *Repository) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 }
 
 type ErrorEntry struct {
-	ID        int64     `json:"id"`
-	Method    string    `json:"method"`
-	Path      string    `json:"path"`
-	Status    int       `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
+	ID           int64     `json:"id"`
+	Method       string    `json:"method"`
+	Path         string    `json:"path"`
+	Status       int       `json:"status"`
+	RequestID    *string   `json:"request_id,omitempty"`
+	IP           *string   `json:"ip,omitempty"`
+	UserAgent    *string   `json:"user_agent,omitempty"`
+	ErrorMessage *string   `json:"error_message,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 func (r *Repository) ListErrors(ctx context.Context, limit int) ([]ErrorEntry, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, method, path, status, created_at
+		`SELECT id, method, path, status, request_id, ip, user_agent, error_message, created_at
 		 FROM error_log ORDER BY created_at DESC LIMIT $1`, limit,
 	)
 	if err != nil {
@@ -113,7 +117,11 @@ func (r *Repository) ListErrors(ctx context.Context, limit int) ([]ErrorEntry, e
 	var out []ErrorEntry
 	for rows.Next() {
 		var e ErrorEntry
-		if err := rows.Scan(&e.ID, &e.Method, &e.Path, &e.Status, &e.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&e.ID, &e.Method, &e.Path, &e.Status,
+			&e.RequestID, &e.IP, &e.UserAgent, &e.ErrorMessage,
+			&e.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		out = append(out, e)

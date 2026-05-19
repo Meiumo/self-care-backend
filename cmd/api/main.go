@@ -143,7 +143,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
-	r.Use(chimw.Recoverer)
+	r.Use(apimiddleware.Recoverer(log, db))
 	r.Use(chimw.Timeout(85 * time.Second))
 	r.Use(corsMiddleware)
 	r.Use(apimiddleware.ErrorLogger(db))

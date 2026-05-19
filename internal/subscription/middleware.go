@@ -28,7 +28,7 @@ func (s *Service) LRAccessMiddleware(next http.Handler) http.Handler {
 					"trial expired — upgrade to premium")
 				return
 			}
-			respond.Internal(w, err)
+			respond.Internal(w, r, err)
 			return
 		}
 

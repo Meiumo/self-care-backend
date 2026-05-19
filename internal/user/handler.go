@@ -50,7 +50,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.svc.UpdateProfile(r.Context(), userID, req.Name, req.AvatarURL); err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -60,7 +60,7 @@ func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	s, err := h.svc.GetStats(r.Context(), userID)
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, s)
@@ -78,7 +78,7 @@ func (h *Handler) setPremium(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.svc.SetPremium(r.Context(), userID, req.Premium); err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

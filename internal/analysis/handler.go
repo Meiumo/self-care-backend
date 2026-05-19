@@ -29,7 +29,7 @@ func (h *Handler) insights(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	report, err := h.svc.GetInsights(r.Context(), userID)
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, report)
@@ -39,7 +39,7 @@ func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	items, err := h.svc.History(r.Context(), userID)
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, items)
@@ -49,12 +49,12 @@ func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	if err := h.svc.RegenerateForUser(r.Context(), userID); err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	report, err := h.svc.GetInsights(r.Context(), userID)
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, report)

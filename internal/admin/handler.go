@@ -76,7 +76,7 @@ func (h *Handler) Routes() http.Handler {
 func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
 	s, err := h.repo.Stats(r.Context())
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, s)
@@ -86,7 +86,7 @@ func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := h.repo.ListUsers(r.Context())
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	if users == nil {
@@ -110,7 +110,7 @@ func (h *Handler) setPremium(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.repo.SetPremium(r.Context(), userID, req.Premium); err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -131,7 +131,7 @@ func (h *Handler) setAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.repo.SetAdmin(r.Context(), userID, req.Admin); err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -153,7 +153,7 @@ func (h *Handler) testNotification(w http.ResponseWriter, r *http.Request) {
 		req.Type = notification.TypeMoodReminder
 	}
 	if err := h.notif.Push(r.Context(), req.UserID, req.Type, req.Title, req.Body); err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, map[string]string{"status": "sent"})
@@ -181,7 +181,7 @@ func (h *Handler) regenWeeklyCard(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) recomputeWeeklyCard(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	if err := h.wc.ComputeForUser(r.Context(), userID); err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -226,7 +226,7 @@ func (h *Handler) triggerLR(w http.ResponseWriter, r *http.Request) {
 
 	sess, err := h.lr.Generate(r.Context(), req.UserID, trigger, req.SelectedChip)
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 
@@ -259,7 +259,7 @@ func (h *Handler) testFollowup(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	sessionID, err := h.repo.CreateTestLRSession(r.Context(), userID, req.EventTag)
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 
@@ -283,7 +283,7 @@ func (h *Handler) listErrors(w http.ResponseWriter, r *http.Request) {
 	}
 	entries, err := h.repo.ListErrors(r.Context(), limit)
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	if entries == nil {

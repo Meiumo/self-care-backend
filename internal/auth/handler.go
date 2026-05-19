@@ -54,7 +54,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, ErrWeakPassword), errors.Is(err, ErrInvalidEmail):
 			respond.BadRequest(w, err.Error())
 		default:
-			respond.Internal(w, err)
+			respond.Internal(w, r, err)
 		}
 		return
 	}
@@ -78,7 +78,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 			respond.Error(w, http.StatusUnauthorized, err.Error())
 			return
 		}
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, result)
@@ -87,7 +87,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	if err := h.svc.Logout(r.Context(), userID); err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, map[string]string{"message": "logged out"})

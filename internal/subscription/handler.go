@@ -29,7 +29,7 @@ func (h *Handler) startTrial(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	st, err := h.svc.StartTrial(r.Context(), userID)
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	type resp struct {
@@ -51,7 +51,7 @@ func (h *Handler) status(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	st, err := h.svc.GetStatus(r.Context(), userID)
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	type resp struct {

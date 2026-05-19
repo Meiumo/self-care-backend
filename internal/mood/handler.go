@@ -60,7 +60,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 			respond.BadRequest(w, err.Error())
 			return
 		}
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.Created(w, entry)
@@ -74,7 +74,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	}
 	entries, err := h.svc.List(r.Context(), userID, page)
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, entries)
@@ -84,7 +84,7 @@ func (h *Handler) weekly(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	report, err := h.svc.WeeklyReport(r.Context(), userID)
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, report)
@@ -93,7 +93,7 @@ func (h *Handler) weekly(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) tags(w http.ResponseWriter, r *http.Request) {
 	tags, err := h.svc.Tags(r.Context())
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, tags)
@@ -107,7 +107,7 @@ func (h *Handler) today(w http.ResponseWriter, r *http.Request) {
 			respond.NotFound(w)
 			return
 		}
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, entry)
@@ -133,7 +133,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		Score: req.Score, WorkHours: req.WorkHours, StressLevel: req.StressLevel, Tags: req.Tags,
 	})
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, entry)

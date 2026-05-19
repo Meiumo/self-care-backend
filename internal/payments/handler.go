@@ -48,7 +48,7 @@ func (h *Handler) webhook(w http.ResponseWriter, r *http.Request) {
 	}
 	sig := r.Header.Get("X-Signature")
 	if err := h.svc.HandleWebhook(r.Context(), body, sig); err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusOK)

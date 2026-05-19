@@ -33,7 +33,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 			respond.NotFound(w)
 			return
 		}
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, card)

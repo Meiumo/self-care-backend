@@ -37,7 +37,7 @@ func (h *Handler) Routes() http.Handler {
 func (h *Handler) eventTypes(w http.ResponseWriter, r *http.Request) {
 	all, err := h.svc.ListEventTypes(r.Context())
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 
@@ -128,7 +128,7 @@ func (h *Handler) generate(w http.ResponseWriter, r *http.Request) {
 		if r.Context().Err() != nil {
 			return // client disconnected; generation may still be running in background
 		}
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 
@@ -195,7 +195,7 @@ func (h *Handler) feedback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.svc.SaveFeedback(r.Context(), sessionID, userID, req.IsHelpful); err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, map[string]string{"status": "ok"})
@@ -240,7 +240,7 @@ func (h *Handler) chat(w http.ResponseWriter, r *http.Request) {
 			respond.Error(w, http.StatusNotFound, "session not found")
 			return
 		}
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 
@@ -285,7 +285,7 @@ func (h *Handler) followup(w http.ResponseWriter, r *http.Request) {
 		RecheckChip: req.RecheckChip,
 	})
 	if err != nil {
-		respond.Internal(w, err)
+		respond.Internal(w, r, err)
 		return
 	}
 	respond.OK(w, result)
