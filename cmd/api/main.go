@@ -11,6 +11,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -22,8 +23,8 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 	"github.com/robfig/cron/v3"
-	httpSwagger "github.com/swaggo/http-swagger"
 
+	"github.com/romangolovachev/selfcare/docs"
 	"github.com/romangolovachev/selfcare/internal/admin"
 	"github.com/romangolovachev/selfcare/internal/analysis"
 	"github.com/romangolovachev/selfcare/pkg/respond"
@@ -40,7 +41,6 @@ import (
 	"github.com/romangolovachev/selfcare/pkg/database"
 	"github.com/romangolovachev/selfcare/pkg/jwtutil"
 	apimiddleware "github.com/romangolovachev/selfcare/pkg/middleware"
-	_ "github.com/romangolovachev/selfcare/docs"
 )
 
 func main() {
@@ -163,10 +163,14 @@ func main() {
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	r.Get("/docs", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
+	r.Get("/docs", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprint(w, `<!doctype html><html><head><title>Self-Care API</title><meta charset="utf-8"/></head><body><script id="api-reference" data-url="/docs/openapi.json"></script><script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script></body></html>`)
 	})
-	r.Get("/docs/*", httpSwagger.WrapHandler)
+	r.Get("/docs/openapi.json", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(docs.Spec)
+	})
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Mount("/auth", authHandler.Routes(jwtSvc))
