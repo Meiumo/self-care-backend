@@ -1,0 +1,997 @@
+basePath: /api/v1
+definitions:
+  admin.ErrorEntry:
+    properties:
+      created_at:
+        type: string
+      error_message:
+        type: string
+      id:
+        type: integer
+      ip:
+        type: string
+      method:
+        type: string
+      path:
+        type: string
+      request_id:
+        type: string
+      status:
+        type: integer
+      user_agent:
+        type: string
+    type: object
+  admin.StatsRow:
+    properties:
+      active_today:
+        type: integer
+      premium_users:
+        type: integer
+      total_users:
+        type: integer
+    type: object
+  admin.UserRow:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      is_admin:
+        type: boolean
+      is_premium:
+        type: boolean
+      name:
+        type: string
+    type: object
+  auth.AuthResult:
+    properties:
+      email:
+        type: string
+      is_premium:
+        type: boolean
+      name:
+        type: string
+      token:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  auth.loginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  auth.registerRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+    type: object
+  liveresponse.chatRequest:
+    properties:
+      message:
+        type: string
+    type: object
+  liveresponse.feedbackRequest:
+    properties:
+      is_helpful:
+        type: boolean
+    type: object
+  liveresponse.followupRequest:
+    properties:
+      answer:
+        description: '"yes" | "no" | "skipped" | "declined"'
+        type: string
+      recheck_chip:
+        description: optional chip chosen by user on "no" screen
+        type: string
+      scheduled_at:
+        description: ISO-8601
+        type: string
+    type: object
+  liveresponse.generateRequest:
+    properties:
+      event_tag:
+        type: string
+      selected_chip:
+        type: string
+    type: object
+  mood.Entry:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      note:
+        type: string
+      score:
+        type: integer
+      stress_level:
+        type: integer
+      tags:
+        items:
+          type: string
+        type: array
+      work_hours:
+        type: number
+    type: object
+  mood.WeeklyReport:
+    properties:
+      avg_mood:
+        type: number
+      avg_stress:
+        type: number
+      avg_work_hours:
+        type: number
+      entries_count:
+        type: integer
+    type: object
+  mood.createRequest:
+    properties:
+      note:
+        type: string
+      score:
+        type: integer
+      stress_level:
+        type: integer
+      tags:
+        items:
+          type: string
+        type: array
+      work_hours:
+        type: number
+    type: object
+  mood.patchRequest:
+    properties:
+      score:
+        type: integer
+      stress_level:
+        type: integer
+      tags:
+        items:
+          type: string
+        type: array
+      work_hours:
+        type: number
+    type: object
+  user.DBUser:
+    properties:
+      avatarURL:
+        type: string
+      email:
+        type: string
+      id:
+        format: int64
+        type: integer
+      isAdmin:
+        type: boolean
+      isPremium:
+        type: boolean
+      name:
+        type: string
+    type: object
+  user.Stats:
+    properties:
+      streak_days:
+        type: integer
+      total_entries:
+        type: integer
+      total_events:
+        type: integer
+    type: object
+  user.updateRequest:
+    properties:
+      avatar_url:
+        type: string
+      name:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Backend API для приложения Self-Care
+  title: Self-Care API
+  version: "1.0"
+paths:
+  /admin/errors:
+    get:
+      parameters:
+      - description: Лимит (макс. 1000, по умолчанию 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/admin.ErrorEntry'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Лог ошибок (admin)
+      tags:
+      - admin
+  /admin/stats:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.StatsRow'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Статистика (admin)
+      tags:
+      - admin
+  /admin/users:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/admin.UserRow'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Список пользователей (admin)
+      tags:
+      - admin
+  /analysis/history:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: История инсайтов
+      tags:
+      - analysis
+  /analysis/insights:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Инсайты пользователя
+      tags:
+      - analysis
+  /analysis/insights/refresh:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновить инсайты
+      tags:
+      - analysis
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Email и пароль
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.AuthResult'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Вход
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Выход
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Email, пароль, имя
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.registerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/auth.AuthResult'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Регистрация
+      tags:
+      - auth
+  /live-response:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Тег события и чип
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/liveresponse.generateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "402":
+          description: Payment Required
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Генерация live-response
+      tags:
+      - live-response
+  /live-response/{id}/chat:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID сессии
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Сообщение пользователя
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/liveresponse.chatRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "429":
+          description: Too Many Requests
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Сообщение в чат
+      tags:
+      - live-response
+  /live-response/{id}/feedback:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID сессии
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Полезно или нет
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/liveresponse.feedbackRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Оставить отзыв на сессию
+      tags:
+      - live-response
+  /live-response/{id}/followup:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID сессии
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Ответ на follow-up
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/liveresponse.followupRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Ответить на follow-up
+      tags:
+      - live-response
+  /live-response/event-types:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Типы событий
+      tags:
+      - live-response
+  /moods:
+    get:
+      parameters:
+      - description: Страница (по умолчанию 1)
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/mood.Entry'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Список записей настроения
+      tags:
+      - moods
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Данные настроения
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/mood.createRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/mood.Entry'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Создать запись настроения
+      tags:
+      - moods
+  /moods/{id}:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID записи
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Обновлённые данные
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/mood.patchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mood.Entry'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновить запись настроения
+      tags:
+      - moods
+  /moods/tags:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Список тегов
+      tags:
+      - moods
+  /moods/today:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mood.Entry'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Запись настроения за сегодня
+      tags:
+      - moods
+  /moods/weekly:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mood.WeeklyReport'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Недельный отчёт
+      tags:
+      - moods
+  /notifications:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Список уведомлений
+      tags:
+      - notifications
+  /notifications/{id}/read:
+    patch:
+      parameters:
+      - description: ID уведомления
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Прочитать уведомление
+      tags:
+      - notifications
+  /notifications/read-all:
+    post:
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Прочитать все уведомления
+      tags:
+      - notifications
+  /notifications/unread-count:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Количество непрочитанных уведомлений
+      tags:
+      - notifications
+  /payments/create:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Создать ссылку на оплату
+      tags:
+      - payments
+  /payments/webhook:
+    post:
+      consumes:
+      - application/octet-stream
+      parameters:
+      - description: Подпись запроса
+        in: header
+        name: X-Signature
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Webhook оплаты (Prodamus)
+      tags:
+      - payments
+  /subscription/start-trial:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Начать пробный период
+      tags:
+      - subscription
+  /subscription/status:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Статус подписки
+      tags:
+      - subscription
+  /users/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user.DBUser'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Профиль текущего пользователя
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Имя и аватар
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/user.updateRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновить профиль
+      tags:
+      - users
+  /users/me/stats:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user.Stats'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Статистика пользователя
+      tags:
+      - users
+  /weekly-card:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Недельная карточка
+      tags:
+      - weekly-card
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

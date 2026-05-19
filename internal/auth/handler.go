@@ -36,6 +36,15 @@ type registerRequest struct {
 	Name     string `json:"name"`
 }
 
+// @Summary      Регистрация
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      registerRequest  true  "Email, пароль, имя"
+// @Success      201   {object}  AuthResult
+// @Failure      400   {object}  map[string]string
+// @Failure      409   {object}  map[string]string
+// @Router       /auth/register [post]
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 	var req registerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -66,6 +75,15 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
+// @Summary      Вход
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      loginRequest  true  "Email и пароль"
+// @Success      200   {object}  AuthResult
+// @Failure      400   {object}  map[string]string
+// @Failure      401   {object}  map[string]string
+// @Router       /auth/login [post]
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -84,6 +102,13 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, result)
 }
 
+// @Summary      Выход
+// @Tags         auth
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /auth/logout [post]
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	if err := h.svc.Logout(r.Context(), userID); err != nil {

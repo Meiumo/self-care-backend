@@ -72,6 +72,13 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
+// @Summary      Статистика (admin)
+// @Tags         admin
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  admin.StatsRow
+// @Failure      403  {object}  map[string]string
+// @Router       /admin/stats [get]
 // GET /admin/stats
 func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
 	s, err := h.repo.Stats(r.Context())
@@ -82,6 +89,13 @@ func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, s)
 }
 
+// @Summary      Список пользователей (admin)
+// @Tags         admin
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {array}   admin.UserRow
+// @Failure      403  {object}  map[string]string
+// @Router       /admin/users [get]
 // GET /admin/users
 func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := h.repo.ListUsers(r.Context())
@@ -273,6 +287,14 @@ func (h *Handler) testFollowup(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary      Лог ошибок (admin)
+// @Tags         admin
+// @Produce      json
+// @Security     BearerAuth
+// @Param        limit  query     int  false  "Лимит (макс. 1000, по умолчанию 100)"
+// @Success      200    {array}   admin.ErrorEntry
+// @Failure      403    {object}  map[string]string
+// @Router       /admin/errors [get]
 // GET /admin/errors?limit=100
 func (h *Handler) listErrors(w http.ResponseWriter, r *http.Request) {
 	limit := 100

@@ -1,3 +1,11 @@
+// @title           Self-Care API
+// @version         1.0
+// @description     Backend API для приложения Self-Care
+// @BasePath        /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in              header
+// @name            Authorization
+
 package main
 
 import (
@@ -14,6 +22,7 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 	"github.com/robfig/cron/v3"
+	httpSwagger "github.com/swaggo/http-swagger"
 
 	"github.com/romangolovachev/selfcare/internal/admin"
 	"github.com/romangolovachev/selfcare/internal/analysis"
@@ -31,6 +40,7 @@ import (
 	"github.com/romangolovachev/selfcare/pkg/database"
 	"github.com/romangolovachev/selfcare/pkg/jwtutil"
 	apimiddleware "github.com/romangolovachev/selfcare/pkg/middleware"
+	_ "github.com/romangolovachev/selfcare/docs"
 )
 
 func main() {
@@ -152,6 +162,8 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
+
+	r.Get("/docs/*", httpSwagger.WrapHandler)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Mount("/auth", authHandler.Routes(jwtSvc))

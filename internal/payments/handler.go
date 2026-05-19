@@ -32,6 +32,13 @@ func (h *Handler) WebhookRoutes() http.Handler {
 	return r
 }
 
+// @Summary      Создать ссылку на оплату
+// @Tags         payments
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /payments/create [post]
 // POST /api/v1/payments/create
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
@@ -39,6 +46,13 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, map[string]string{"payment_url": payURL})
 }
 
+// @Summary      Webhook оплаты (Prodamus)
+// @Tags         payments
+// @Accept       application/octet-stream
+// @Param        X-Signature  header  string  true  "Подпись запроса"
+// @Success      200
+// @Failure      400  {object}  map[string]string
+// @Router       /payments/webhook [post]
 // POST /api/v1/payments/webhook
 func (h *Handler) webhook(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))

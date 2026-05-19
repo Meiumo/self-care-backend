@@ -40,6 +40,15 @@ type createRequest struct {
 	Tags        []string `json:"tags"`
 }
 
+// @Summary      Создать запись настроения
+// @Tags         moods
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      createRequest  true  "Данные настроения"
+// @Success      201   {object}  mood.Entry
+// @Failure      400   {object}  map[string]string
+// @Router       /moods [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	var req createRequest
@@ -66,6 +75,14 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	respond.Created(w, entry)
 }
 
+// @Summary      Список записей настроения
+// @Tags         moods
+// @Produce      json
+// @Security     BearerAuth
+// @Param        page  query     int  false  "Страница (по умолчанию 1)"
+// @Success      200   {array}   mood.Entry
+// @Failure      500   {object}  map[string]string
+// @Router       /moods [get]
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
@@ -80,6 +97,13 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, entries)
 }
 
+// @Summary      Недельный отчёт
+// @Tags         moods
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  mood.WeeklyReport
+// @Failure      500  {object}  map[string]string
+// @Router       /moods/weekly [get]
 func (h *Handler) weekly(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	report, err := h.svc.WeeklyReport(r.Context(), userID)
@@ -90,6 +114,13 @@ func (h *Handler) weekly(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, report)
 }
 
+// @Summary      Список тегов
+// @Tags         moods
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {array}   string
+// @Failure      500  {object}  map[string]string
+// @Router       /moods/tags [get]
 func (h *Handler) tags(w http.ResponseWriter, r *http.Request) {
 	tags, err := h.svc.Tags(r.Context())
 	if err != nil {
@@ -99,6 +130,13 @@ func (h *Handler) tags(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, tags)
 }
 
+// @Summary      Запись настроения за сегодня
+// @Tags         moods
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  mood.Entry
+// @Failure      404  {object}  map[string]string
+// @Router       /moods/today [get]
 func (h *Handler) today(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	entry, err := h.svc.Today(r.Context(), userID)
@@ -120,6 +158,16 @@ type patchRequest struct {
 	Tags        []string `json:"tags"`
 }
 
+// @Summary      Обновить запись настроения
+// @Tags         moods
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path      int           true  "ID записи"
+// @Param        body  body      patchRequest  true  "Обновлённые данные"
+// @Success      200   {object}  mood.Entry
+// @Failure      400   {object}  map[string]string
+// @Router       /moods/{id} [patch]
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)

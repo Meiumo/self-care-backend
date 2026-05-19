@@ -33,6 +33,13 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
+// @Summary      Типы событий
+// @Tags         live-response
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string]any
+// @Failure      500  {object}  map[string]string
+// @Router       /live-response/event-types [get]
 // GET /live-response/event-types
 func (h *Handler) eventTypes(w http.ResponseWriter, r *http.Request) {
 	all, err := h.svc.ListEventTypes(r.Context())
@@ -91,6 +98,17 @@ type generateRequest struct {
 	SelectedChip string `json:"selected_chip"`
 }
 
+// @Summary      Генерация live-response
+// @Tags         live-response
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      generateRequest  true  "Тег события и чип"
+// @Success      200   {object}  map[string]any
+// @Failure      400   {object}  map[string]string
+// @Failure      402   {object}  map[string]string
+// @Failure      422   {object}  map[string]string
+// @Router       /live-response [post]
 func (h *Handler) generate(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	var req generateRequest
@@ -182,6 +200,15 @@ type feedbackRequest struct {
 	IsHelpful bool `json:"is_helpful"`
 }
 
+// @Summary      Оставить отзыв на сессию
+// @Tags         live-response
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path      int              true  "ID сессии"
+// @Param        body  body      feedbackRequest  true  "Полезно или нет"
+// @Success      200   {object}  map[string]string
+// @Router       /live-response/{id}/feedback [post]
 func (h *Handler) feedback(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	sessionID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
@@ -206,6 +233,18 @@ type chatRequest struct {
 	Message string `json:"message"`
 }
 
+// @Summary      Сообщение в чат
+// @Tags         live-response
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path      int          true  "ID сессии"
+// @Param        body  body      chatRequest  true  "Сообщение пользователя"
+// @Success      200   {object}  map[string]any
+// @Failure      400   {object}  map[string]string
+// @Failure      404   {object}  map[string]string
+// @Failure      429   {object}  map[string]string
+// @Router       /live-response/{id}/chat [post]
 func (h *Handler) chat(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	sessionID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
@@ -262,6 +301,16 @@ type followupRequest struct {
 	RecheckChip string `json:"recheck_chip"` // optional chip chosen by user on "no" screen
 }
 
+// @Summary      Ответить на follow-up
+// @Tags         live-response
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path      int              true  "ID сессии"
+// @Param        body  body      followupRequest  true  "Ответ на follow-up"
+// @Success      200   {object}  map[string]any
+// @Failure      400   {object}  map[string]string
+// @Router       /live-response/{id}/followup [post]
 func (h *Handler) followup(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	sessionID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)

@@ -27,6 +27,13 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
+// @Summary      Профиль текущего пользователя
+// @Tags         users
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  user.DBUser
+// @Failure      404  {object}  map[string]string
+// @Router       /users/me [get]
 func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	profile, err := h.svc.Me(r.Context(), userID)
@@ -42,6 +49,14 @@ type updateRequest struct {
 	AvatarURL string `json:"avatar_url"`
 }
 
+// @Summary      Обновить профиль
+// @Tags         users
+// @Accept       json
+// @Security     BearerAuth
+// @Param        body  body  updateRequest  true  "Имя и аватар"
+// @Success      204
+// @Failure      400  {object}  map[string]string
+// @Router       /users/me [put]
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	var req updateRequest
@@ -56,6 +71,13 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// @Summary      Статистика пользователя
+// @Tags         users
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  user.Stats
+// @Failure      500  {object}  map[string]string
+// @Router       /users/me/stats [get]
 func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	s, err := h.svc.GetStats(r.Context(), userID)

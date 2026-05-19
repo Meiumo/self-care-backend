@@ -1,4 +1,4 @@
-.PHONY: dev build test lint \
+.PHONY: dev build test lint coverage docs \
         docker-up docker-down docker-logs db-shell set-admin \
         mk-start mk-build mk-apply mk-up mk-down mk-url mk-logs mk-status mk-forward \
         tidy
@@ -14,8 +14,15 @@ build:
 test:
 	go test ./... -v -race -count=1
 
+coverage:
+	go test ./... -race -count=1 -coverprofile=coverage.out
+	go tool cover -func=coverage.out
+
 lint:
-	golangci-lint run ./...
+	golangci-lint run ./... --config .golangci.yml
+
+docs:
+	swag init -g cmd/api/main.go -o docs/
 
 tidy:
 	go mod tidy

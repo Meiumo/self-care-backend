@@ -25,6 +25,13 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
+// @Summary      Инсайты пользователя
+// @Tags         analysis
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string]any
+// @Failure      500  {object}  map[string]string
+// @Router       /analysis/insights [get]
 func (h *Handler) insights(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	report, err := h.svc.GetInsights(r.Context(), userID)
@@ -35,6 +42,13 @@ func (h *Handler) insights(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, report)
 }
 
+// @Summary      История инсайтов
+// @Tags         analysis
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {array}   map[string]any
+// @Failure      500  {object}  map[string]string
+// @Router       /analysis/history [get]
 func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	items, err := h.svc.History(r.Context(), userID)
@@ -45,6 +59,13 @@ func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
 	respond.OK(w, items)
 }
 
+// @Summary      Обновить инсайты
+// @Tags         analysis
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string]any
+// @Failure      500  {object}  map[string]string
+// @Router       /analysis/insights/refresh [post]
 // refresh triggers insight regeneration for the current user only (for testing).
 func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())

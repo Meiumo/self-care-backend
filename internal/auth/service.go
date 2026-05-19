@@ -18,8 +18,15 @@ var (
 	ErrInvalidEmail  = errors.New("invalid email")
 )
 
+type authRepository interface {
+	CreateUser(ctx context.Context, email, passwordHash, name string) (int64, error)
+	FindByEmail(ctx context.Context, email string) (*DBUser, error)
+	BumpTokenVersion(ctx context.Context, userID int64) (int, error)
+	GetTokenVersion(ctx context.Context, userID int64) (int, error)
+}
+
 type Service struct {
-	repo *Repository
+	repo authRepository
 	jwt  *jwtutil.Service
 }
 

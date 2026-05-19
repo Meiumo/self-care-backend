@@ -24,6 +24,13 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
+// @Summary      Недельная карточка
+// @Tags         weekly-card
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string]any
+// @Failure      404  {object}  map[string]string
+// @Router       /weekly-card [get]
 // GET /api/v1/weekly-card
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())

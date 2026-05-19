@@ -24,6 +24,13 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
+// @Summary      Начать пробный период
+// @Tags         subscription
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string]any
+// @Failure      500  {object}  map[string]string
+// @Router       /subscription/start-trial [post]
 // POST /api/v1/subscription/start-trial
 func (h *Handler) startTrial(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
@@ -46,6 +53,13 @@ func (h *Handler) startTrial(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary      Статус подписки
+// @Tags         subscription
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string]any
+// @Failure      500  {object}  map[string]string
+// @Router       /subscription/status [get]
 // GET /api/v1/subscription/status
 func (h *Handler) status(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
