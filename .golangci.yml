@@ -23,7 +23,6 @@ linters:
         - name: exported
           disabled: true
 
-issues:
   exclusions:
     rules:
       - path: _test\.go
