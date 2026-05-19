@@ -20,6 +20,7 @@ type Profile struct {
 	Name      string `json:"name"`
 	AvatarURL string `json:"avatar_url"`
 	IsPremium bool   `json:"is_premium"`
+	IsAdmin   bool   `json:"is_admin"`
 }
 
 func (s *Service) Me(ctx context.Context, userID int64) (*Profile, error) {
@@ -30,7 +31,7 @@ func (s *Service) Me(ctx context.Context, userID int64) (*Profile, error) {
 		}
 		return nil, err
 	}
-	return &Profile{ID: u.ID, Email: u.Email, Name: u.Name, AvatarURL: u.AvatarURL, IsPremium: u.IsPremium}, nil
+	return &Profile{ID: u.ID, Email: u.Email, Name: u.Name, AvatarURL: u.AvatarURL, IsPremium: u.IsPremium, IsAdmin: u.IsAdmin}, nil
 }
 
 func (s *Service) UpdateProfile(ctx context.Context, userID int64, name, avatarURL string) error {

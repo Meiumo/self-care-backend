@@ -142,6 +142,7 @@ ON CONFLICT (tag) DO NOTHING;
 
 -- ─── Subscription / trial ────────────────────────────────────────────────────
 -- trial_started_at: set on first Live Response use; NULL = not started yet
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_started_at TIMESTAMPTZ;
 -- lr_used_month + lr_month_key: free-tier counter, reset on new YYYY-MM
 ALTER TABLE users ADD COLUMN IF NOT EXISTS lr_used_month  INT  NOT NULL DEFAULT 0;
@@ -254,6 +255,17 @@ CREATE TABLE IF NOT EXISTS live_response_messages (
 
 CREATE INDEX IF NOT EXISTS idx_lr_messages_session
     ON live_response_messages(session_id, created_at);
+
+-- ─── Admin error log ──────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS error_log (
+    id         BIGSERIAL PRIMARY KEY,
+    method     TEXT NOT NULL DEFAULT '',
+    path       TEXT NOT NULL DEFAULT '',
+    status     INT  NOT NULL DEFAULT 500,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_error_log_created ON error_log(created_at DESC);
 
 -- ─── Event types catalogue ─────────────────────────────────────────────────────
 -- Single source of truth for all loggable events.

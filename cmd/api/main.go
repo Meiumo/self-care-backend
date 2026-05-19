@@ -15,6 +15,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/robfig/cron/v3"
 
+	"github.com/romangolovachev/selfcare/internal/admin"
 	"github.com/romangolovachev/selfcare/internal/analysis"
 	"github.com/romangolovachev/selfcare/pkg/respond"
 	"github.com/romangolovachev/selfcare/internal/auth"
@@ -29,6 +30,7 @@ import (
 	"github.com/romangolovachev/selfcare/internal/weeklycard"
 	"github.com/romangolovachev/selfcare/pkg/database"
 	"github.com/romangolovachev/selfcare/pkg/jwtutil"
+	apimiddleware "github.com/romangolovachev/selfcare/pkg/middleware"
 )
 
 func main() {
@@ -94,6 +96,9 @@ func main() {
 	wcSvc := weeklycard.NewService(db)
 	wcHandler := weeklycard.NewHandler(wcSvc)
 
+	adminRepo := admin.NewRepository(db)
+	adminHandler := admin.NewHandler(adminRepo, notifSvc, analysisSvc, wcSvc, lrSvc)
+
 	// Moscow is UTC+3 and has no DST since 2014 — fixed zone is correct
 	moscow := time.FixedZone("MSK", 3*60*60)
 	c := cron.New(cron.WithLocation(moscow))
@@ -141,6 +146,7 @@ func main() {
 	r.Use(chimw.Recoverer)
 	r.Use(chimw.Timeout(85 * time.Second))
 	r.Use(corsMiddleware)
+	r.Use(apimiddleware.ErrorLogger(db))
 
 	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -162,6 +168,7 @@ func main() {
 			r.Mount("/subscription", subHandler.Routes())
 			r.Mount("/weekly-card", wcHandler.Routes())
 			r.Mount("/payments/create", paymentsHandler.CreateRoutes())
+			r.Mount("/admin", adminHandler.Routes())
 			r.Group(func(r chi.Router) {
 				r.Use(subSvc.LRAccessMiddleware)
 				r.Mount("/live-response", lrHandler.Routes())

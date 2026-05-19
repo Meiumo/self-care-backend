@@ -21,14 +21,15 @@ type DBUser struct {
 	Name      string
 	AvatarURL string
 	IsPremium bool
+	IsAdmin   bool
 }
 
 func (r *Repository) FindByID(ctx context.Context, id int64) (*DBUser, error) {
 	u := &DBUser{}
 	err := r.db.QueryRow(ctx,
-		`SELECT id, email, name, COALESCE(avatar_url, ''), is_premium FROM users WHERE id = $1`,
+		`SELECT id, email, name, COALESCE(avatar_url, ''), is_premium, is_admin FROM users WHERE id = $1`,
 		id,
-	).Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.IsPremium)
+	).Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.IsPremium, &u.IsAdmin)
 	if err != nil {
 		return nil, err
 	}

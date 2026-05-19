@@ -1,5 +1,5 @@
 .PHONY: dev build test lint \
-        docker-up docker-down docker-logs db-shell \
+        docker-up docker-down docker-logs db-shell set-admin \
         mk-start mk-build mk-apply mk-up mk-down mk-url mk-logs mk-status mk-forward \
         tidy
 
@@ -33,6 +33,11 @@ docker-logs:
 
 db-shell:
 	docker compose exec db psql -U selfcare selfcare
+
+set-admin:
+	@test -n "$(email)" || (echo "Usage: make set-admin email=user@example.com"; exit 1)
+	docker compose exec db psql -U selfcare selfcare -c \
+	  "UPDATE users SET is_admin = TRUE WHERE email = '$(email)'; SELECT id, email, is_admin FROM users WHERE email = '$(email)';"
 
 # ─── Minikube ─────────────────────────────────────────────────────────────────
 

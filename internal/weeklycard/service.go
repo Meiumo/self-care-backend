@@ -51,7 +51,7 @@ func (s *Service) ComputeAll(ctx context.Context) {
 
 	slog.Default().Info("weeklycard: computing", "users", len(uids))
 	for _, uid := range uids {
-		if err := s.computeForUser(ctx, uid); err != nil {
+		if err := s.ComputeForUser(ctx, uid); err != nil {
 			slog.Default().Error("weeklycard: user", "user_id", uid, "err", err)
 		}
 	}
@@ -79,7 +79,7 @@ func (s *Service) GetCard(ctx context.Context, userID int64) (*Card, error) {
 
 // ── Internal ──────────────────────────────────────────────────────────────────
 
-func (s *Service) computeForUser(ctx context.Context, userID int64) error {
+func (s *Service) ComputeForUser(ctx context.Context, userID int64) error {
 	card := Card{}
 
 	// Top heavy event this week
