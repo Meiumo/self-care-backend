@@ -27,8 +27,8 @@ func (r *Repository) Stats(ctx context.Context) (*StatsRow, error) {
 		`SELECT
 		    COUNT(*)                                              AS total_users,
 		    COUNT(*) FILTER (WHERE is_premium)                   AS premium_users,
-		    COUNT(DISTINCT user_id) FILTER (
-		        WHERE user_id IN (
+		    COUNT(DISTINCT id) FILTER (
+		        WHERE id IN (
 		            SELECT DISTINCT user_id FROM mood_entries
 		            WHERE ts_to_date(created_at) = CURRENT_DATE
 		        )
