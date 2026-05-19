@@ -165,7 +165,7 @@ func main() {
 
 	r.Get("/docs", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, `<!doctype html><html><head><title>Self-Care API</title><meta charset="utf-8"/></head><body><script id="api-reference" data-url="/docs/openapi.json"></script><script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script></body></html>`)
+		_, _ = fmt.Fprint(w, `<!doctype html><html><head><title>Self-Care API</title><meta charset="utf-8"/></head><body><script id="api-reference" data-url="/docs/openapi.json"></script><script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script></body></html>`)
 	})
 	r.Get("/docs/openapi.json", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
