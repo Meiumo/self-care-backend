@@ -26,6 +26,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       PORT: 8080
       APP_ENV: ${APP_ENV:-production}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
     depends_on:
       db:
         condition: service_healthy

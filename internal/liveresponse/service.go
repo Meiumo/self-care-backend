@@ -36,7 +36,7 @@ type Session struct {
 type Service struct {
 	db      *pgxpool.Pool
 	client  *OpenRouterClient
-	ctx_bld *ContextBuilder
+	ctxBld *ContextBuilder
 	evtRepo *EventTypeRepo
 }
 
@@ -44,7 +44,7 @@ func NewService(db *pgxpool.Pool, client *OpenRouterClient) *Service {
 	return &Service{
 		db:      db,
 		client:  client,
-		ctx_bld: NewContextBuilder(db),
+		ctxBld: NewContextBuilder(db),
 		evtRepo: NewEventTypeRepo(db),
 	}
 }
@@ -81,7 +81,7 @@ func (s *Service) Generate(
 	}
 
 	// 1. Dynamic context from user history
-	ctxText, err := s.ctx_bld.Build(ctx, userID)
+	ctxText, err := s.ctxBld.Build(ctx, userID)
 	if err != nil {
 		ctxText = "" // non-fatal: proceed without context
 	}
@@ -296,7 +296,7 @@ func (s *Service) Chat(ctx context.Context, sessionID, userID int64, message str
 	}
 
 	// Fresh user context (today's state, trends, insights) — same as Generate.
-	ctxText, _ := s.ctx_bld.Build(ctx, userID)
+	ctxText, _ := s.ctxBld.Build(ctx, userID)
 
 	// Reconstruct the full conversation: system → user context → original trigger
 	// → first AI response → saved history → current message.

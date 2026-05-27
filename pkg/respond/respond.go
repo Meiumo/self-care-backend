@@ -29,7 +29,6 @@ func Error(w http.ResponseWriter, status int, msg string) {
 }
 
 func BadRequest(w http.ResponseWriter, msg string)  { Error(w, http.StatusBadRequest, msg) }
-func Unauthorized(w http.ResponseWriter)            { Error(w, http.StatusUnauthorized, "unauthorized") }
 func NotFound(w http.ResponseWriter)                { Error(w, http.StatusNotFound, "not found") }
 
 // Internal logs the error with a full stack trace and returns 500.

@@ -1,5 +1,0 @@
--- +migrate Up
-ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;
-
--- +migrate Down
-ALTER TABLE users DROP COLUMN IF EXISTS is_admin;

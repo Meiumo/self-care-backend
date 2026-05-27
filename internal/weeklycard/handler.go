@@ -1,6 +1,7 @@
 package weeklycard
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -38,7 +39,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	userID := jwtutil.UserID(r.Context())
 	card, err := h.svc.GetCard(r.Context(), userID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			respond.NotFound(w)
 			return
 		}

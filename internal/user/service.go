@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -26,8 +27,8 @@ type Profile struct {
 func (s *Service) Me(ctx context.Context, userID int64) (*Profile, error) {
 	u, err := s.repo.FindByID(ctx, userID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, ErrNotFound
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, pgx.ErrNoRows
 		}
 		return nil, err
 	}
@@ -46,4 +47,3 @@ func (s *Service) GetStats(ctx context.Context, userID int64) (*Stats, error) {
 	return s.repo.GetStats(ctx, userID)
 }
 
-var ErrNotFound = pgx.ErrNoRows
