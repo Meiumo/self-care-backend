@@ -91,7 +91,7 @@ go test ./... -race -count=1
 
 ### Документация API
 
-[Scalar](https://scalar.com) UI доступен по адресу `/docs` при запущенном сервере. Исходная спецификация (OpenAPI JSON) — на `/docs/openapi.json` и в файле `docs/swagger.json`.
+[Scalar](https://github.com/scalar/scalar) UI доступен по адресу `/docs` при запущенном сервере. Исходная спецификация (OpenAPI JSON) — на `/docs/openapi.json` и в файле `docs/swagger.json`.
 
 ## Деплой
 
